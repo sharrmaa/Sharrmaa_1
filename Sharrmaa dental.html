@@ -1,0 +1,1504 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Chairside</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+/* Layout: sidebar + working pane on desktop, top bar + bottom tabs on phones. Clinical slate ground, teal accent. */
+:root {
+  --bg: 242 246 247; --surface: 255 255 255; --surface2: 234 241 243; --line: 214 225 229;
+  --ink: 16 32 44; --muted: 84 101 117;
+  --accent: 15 118 110; --accent-soft: 208 240 234; --accent-ink: 17 94 89; --on-accent: 255 255 255;
+  --warn: 176 84 8; --warn-soft: 253 237 208; --danger: 190 24 60; --danger-soft: 253 226 233;
+  --ok: 22 122 60; --ok-soft: 216 243 224;
+  --font-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: 16 26 36; --surface: 23 36 49; --surface2: 31 47 62; --line: 47 65 82;
+    --ink: 228 236 242; --muted: 150 168 184;
+    --accent: 56 206 186; --accent-soft: 20 66 66; --accent-ink: 160 240 226; --on-accent: 10 36 38;
+    --warn: 247 187 70; --warn-soft: 70 52 18; --danger: 251 120 140; --danger-soft: 80 28 40;
+    --ok: 96 214 140; --ok-soft: 22 64 42;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: 16 26 36; --surface: 23 36 49; --surface2: 31 47 62; --line: 47 65 82;
+  --ink: 228 236 242; --muted: 150 168 184;
+  --accent: 56 206 186; --accent-soft: 20 66 66; --accent-ink: 160 240 226; --on-accent: 10 36 38;
+  --warn: 247 187 70; --warn-soft: 70 52 18; --danger: 251 120 140; --danger-soft: 80 28 40;
+  --ok: 96 214 140; --ok-soft: 22 64 42;
+  color-scheme: dark;
+}
+html { height: 100%; }
+body { min-height: 100%; background: rgb(var(--bg)); color: rgb(var(--ink)); font-family: var(--font-body); font-size: 15px; -webkit-font-smoothing: antialiased; }
+#root { min-height: 100%; }
+:focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; }
+.sticky-side { position: sticky; top: env(safe-area-inset-top, 0px); height: 100vh; height: 100dvh; }
+.toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); animation: toast-in .22s ease-out; }
+@media (min-width: 768px) { .toast { bottom: 24px; } }
+.slide-in { animation: sheet-up .24s cubic-bezier(.2,.8,.2,1); }
+@media (min-width: 640px) { .slide-in { animation: sheet-left .26s cubic-bezier(.2,.8,.2,1); } }
+.fade-in { animation: fade .2s ease-out; }
+@keyframes sheet-up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes sheet-left { from { transform: translateX(32px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes toast-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+#boot-error { max-width: 520px; margin: 15vh auto; padding-inline: 16px; }
+</style>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script>
+try {
+  const v = (n) => `rgb(var(--${n}) / <alpha-value>)`;
+  tailwind.config = {
+    theme: { extend: {
+      fontFamily: { sans: ['"Atkinson Hyperlegible"', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'] },
+      colors: {
+        bg: v('bg'), surface: v('surface'), surface2: v('surface2'), line: v('line'),
+        ink: v('ink'), muted: v('muted'), accent: v('accent'), accentsoft: v('accent-soft'), accentink: v('accent-ink'),
+        onaccent: v('on-accent'), warn: v('warn'), warnsoft: v('warn-soft'), danger: v('danger'), dangersoft: v('danger-soft'),
+        ok: v('ok'), oksoft: v('ok-soft'),
+      },
+    } },
+  };
+} catch (e) {}
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide-react@0.383.0/dist/umd/lucide-react.min.js"></script>
+<div id="root"></div>
+<div id="boot-error" hidden><h1>Chairside couldn't start</h1><p>The React library didn't load. Check your connection and reload the page.</p></div>
+<script>
+if (!window.React || !window.ReactDOM) { document.getElementById('boot-error').hidden = false; } else {
+const { useState, useMemo, useEffect, useRef } = React, pad = (n) => String(n).padStart(2, "0"), toISO = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, TODAY = (() => {
+  const d = /* @__PURE__ */ new Date();
+  return d.setHours(0, 0, 0, 0), d;
+})(), TODAY_ISO = toISO(TODAY), addDays = (n) => {
+  const d = new Date(TODAY);
+  return d.setDate(d.getDate() + n), toISO(d);
+}, parseISO = (s) => {
+  const [y, m, d] = String(s).split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}, daysFrom = (s) => Math.round((parseISO(s) - TODAY) / 864e5), fmtDate = (s) => {
+  if (!s) return "";
+  const d = parseISO(s);
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", ...d.getFullYear() !== TODAY.getFullYear() ? { year: "numeric" } : {} });
+}, relDay = (s) => {
+  const n = daysFrom(s);
+  return n === 0 ? "today" : n === 1 ? "tomorrow" : n === -1 ? "yesterday" : n > 0 ? `in ${n} days` : `${-n} days ago`;
+}, plural = (n, word, many) => `${n} ${n === 1 ? word : many || word + "s"}`;
+function Icon({ name, size = 18, className = "" }) {
+  const C = (window.LucideReact || {})[name];
+  return C ? /* @__PURE__ */ React.createElement(C, { size, className, strokeWidth: 1.9, "aria-hidden": "true" }) : /* @__PURE__ */ React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", className, "aria-hidden": "true", fill: "none", stroke: "currentColor", strokeWidth: "2" }, /* @__PURE__ */ React.createElement("circle", { cx: "12", cy: "12", r: "7" }));
+}
+const DISCIPLINES = [
+  { key: "Periodontology", short: "Perio", code: "PERIO", hue: "#c2255c", clinical: !0 },
+  { key: "Paediatric Dentistry", short: "Paeds", code: "PAED", hue: "#2f9e44", clinical: !0 },
+  { key: "Oral Surgery", short: "OS", code: "OS", hue: "#1c7ed6", clinical: !0 },
+  { key: "General Clinical Practice", short: "GCP", code: "GCP", hue: "#0c8599", clinical: !0 },
+  { key: "Orthodontics", short: "Ortho", code: "ORTHO", hue: "#e67700", clinical: !0 },
+  { key: "Operative / Conservative Dentistry", short: "Operative", code: "OPER", hue: "#8c6239", clinical: !0 },
+  { key: "Fixed Prosthodontics", short: "Fixed Prostho", code: "FPROS", hue: "#7048e8", clinical: !0 },
+  { key: "Removable Prosthodontics", short: "Removable Prostho", code: "RPROS", hue: "#ae3ec9", clinical: !0 },
+  { key: "Endodontics", short: "Endo", code: "ENDO", hue: "#e03131", clinical: !0 },
+  { key: "Oral Pathology / Oral Medicine", short: "OPath / OMed", code: "OMED", hue: "#5c6b7a", clinical: !1 }
+], CLINICAL = DISCIPLINES.filter((d) => d.clinical), discInfo = (k) => DISCIPLINES.find((s) => s.key === k) || { key: k || "Other", short: k || "Other", code: "X", hue: "#64748b", clinical: !0 }, STAGES = ["E&D 1", "E&D 2", "Radiograph", "Scaling", "Treatment", "Completed / Review"], DONE_STAGE = "Completed / Review", TREATMENT_STEPS = {
+  Endodontics: ["Access cavity prep", "Tooth build-up", "Coronal flaring", "Working length determination", "Canal shaping and cleaning", "Master cone fit", "Obturation", "Coronal seal and final restoration"],
+  "Fixed Prosthodontics": ["Core build-up or post and core", "Tooth preparation", "Provisional restoration", "Gingival retraction and final impression", "Shade selection", "Lab work", "Try-in", "Cementation", "Review"]
+}, stepsFor = (discipline) => TREATMENT_STEPS[discipline] || null, LEGACY_STAGE = { Screening: "E&D 1", "Treatment Plan": "E&D 2", Active: "Treatment", "Lab Stage": "Treatment", Maintenance: DONE_STAGE }, stageLabel = (p) => {
+  const steps = stepsFor(p.discipline);
+  return p.stage === "Treatment" && steps ? `Treatment: ${steps[Math.min(p.txStep || 0, steps.length - 1)]}` : p.stage;
+}, NAMES_KEY = "chairside.showNames", EXAM_FORMATS = ["MCQ / SBA", "SAQ / Essay", "OSCE", "Viva", "Clinical exam"], EMPHASIS = ["Will come out", "Emphasised", "Mentioned"], emphasisRank = (e) => ({ "Will come out": 3, Emphasised: 2, Mentioned: 1 })[e] || 0, emphasisTone = { "Will come out": "warn", Emphasised: "accent", Mentioned: "neutral" }, shorten = (t, n) => t.length > n ? t.slice(0, n - 1).replace(/[\s,.;:]+\S*$/, "") + "\u2026" : t, RELIABILITY = ["High", "Med", "Low"], LAB_STATUSES = ["In lab", "Returned, try-in pending", "Try-in passed", "Adjust and re-send", "Issued to patient"], LAB_CLOSED = ["Try-in passed", "Issued to patient"], MASTERY = ["Learning", "Review", "Mastered"], TAGS = ["#ChairsideViva", "#Complication", "#FacultyPearl", "#Ergonomics"], req = (id, discipline, name, target, stages, baseDone = 0) => ({ id, discipline, name, target, stages, baseDone, baseIP: 0 }), RCT_STAGES = ["Access and working length", "Cleaning and shaping", "Obturation", "Coronal restoration"], makeRequirements = () => [
+  req("perio-nspt", "Periodontology", "Non-surgical periodontal therapy (Stage III/IV)", 4, ["Charting and OHI", "RSD, first half", "RSD, second half", "Re-evaluation"]),
+  req("perio-spt", "Periodontology", "Supportive periodontal care", 3, ["Session done"]),
+  req("perio-case", "Periodontology", "Periodontal case presentation", 1, ["Case selected", "Records collected", "Presented"]),
+  req("paed-rest", "Paediatric Dentistry", "Primary tooth restorations", 8, ["Restored"]),
+  req("paed-pulp", "Paediatric Dentistry", "Pulpotomy or pulpectomy", 3, ["Pulp therapy", "Final restoration"]),
+  req("paed-ssc", "Paediatric Dentistry", "Stainless steel crowns (incl. Hall technique)", 3, ["Crown fitted"]),
+  req("paed-sm", "Paediatric Dentistry", "Space maintainer", 1, ["Band fit and impression", "Fit appliance", "Review"]),
+  req("paed-prev", "Paediatric Dentistry", "Fissure sealants and fluoride varnish", 6, ["Applied"]),
+  req("os-simple", "Oral Surgery", "Simple extractions", 20, ["Extracted"], 6),
+  req("os-surg", "Oral Surgery", "Surgical extraction (flap raised)", 2, ["Assessment and consent", "Surgery", "Post-op review"]),
+  req("os-m3", "Oral Surgery", "Impacted third molar assessment", 2, ["Clinical and OPG assessment", "Plan presented"]),
+  req("gcp-comp", "General Clinical Practice", "Comprehensive care cases", 3, ["History and examination", "Treatment plan approved", "Treatment completed", "Review"]),
+  req("gcp-med", "General Clinical Practice", "Medically compromised patients managed", 4, ["Managed"]),
+  req("gcp-emerg", "General Clinical Practice", "Emergency and pain clinic sessions", 5, ["Session done"]),
+  req("ortho-assess", "Orthodontics", "Orthodontic assessment (IOTN and space analysis)", 3, ["Records taken", "Analysis done", "Case discussed"]),
+  req("ortho-raa", "Orthodontics", "Removable appliance", 2, ["Impressions", "Design sent to lab", "Fit", "Adjustment review"]),
+  req("ortho-ceph", "Orthodontics", "Cephalometric tracing", 3, ["Traced and analysed"]),
+  req("oper-c2", "Operative / Conservative Dentistry", "Class II composite restorations", 10, ["Restored"]),
+  req("oper-other", "Operative / Conservative Dentistry", "Class I, III and V restorations", 8, ["Restored"]),
+  req("oper-complex", "Operative / Conservative Dentistry", "Complex amalgam or composite (cusp coverage)", 3, ["Restored"]),
+  req("oper-pulp", "Operative / Conservative Dentistry", "Direct or indirect pulp capping", 2, ["Capping and lining", "Review and definitive restoration"]),
+  req("fp-crown", "Fixed Prosthodontics", "Crowns (PFM or all-ceramic)", 2, ["Prep", "Impression", "Try-in", "Cementation"]),
+  req("fp-post", "Fixed Prosthodontics", "Post and core", 1, ["Post space prep", "Impression or direct pattern", "Try-in", "Cementation"]),
+  req("fp-bridge", "Fixed Prosthodontics", "Bridge (conventional or resin-bonded)", 1, ["Prep", "Impression", "Try-in", "Cementation"]),
+  req("rp-cd", "Removable Prosthodontics", "Complete denture (upper and lower)", 1, ["Primary impressions", "Secondary impressions", "Jaw registration", "Trial insertion", "Insertion", "Review"]),
+  req("rp-rpd", "Removable Prosthodontics", "Removable partial denture (Co-Cr or acrylic)", 2, ["Primary impressions and survey", "Mouth prep and secondary impression", "Jaw registration", "Framework or wax try-in", "Insertion"]),
+  req("endo-ant", "Endodontics", "RCT, anterior or premolar", 3, RCT_STAGES),
+  req("endo-mol", "Endodontics", "RCT, molar", 1, RCT_STAGES)
+], pt = (id, name, regNo, age, gender, discipline, complaint, reliability, stage, txStep, visits, next) => ({ id, name, regNo, age, gender, discipline, complaint, reliability, stage, txStep, visits, nextAppt: addDays(next) }), makePatients = () => [
+  pt("RPROS-01", "Ahmad Zulkifli", "R-240817", 67, "M", "Removable Prosthodontics", "Loose upper denture, cannot chew properly", "High", "Treatment", 0, 6, 1),
+  pt("RPROS-02", "Lim Siew Hong", "R-241102", 58, "F", "Removable Prosthodontics", "Missing lower back teeth (Kennedy Class I), wants a partial denture", "Med", "E&D 2", 0, 2, 3),
+  pt("FPROS-01", "Ravi Shankar", "R-240563", 45, "M", "Fixed Prosthodontics", "Crown needed on 36 after root canal treatment", "High", "Treatment", 5, 5, 0),
+  pt("FPROS-02", "Nurul Ain Hashim", "R-241290", 38, "F", "Fixed Prosthodontics", "Root-filled 11 fractured at the gumline, needs post, core and crown", "Med", "Treatment", 0, 3, 6),
+  pt("ENDO-01", "Chong Wei Ting", "R-241455", 34, "F", "Endodontics", "Lingering pain to cold on 46, worse at night", "High", "Treatment", 3, 3, 2),
+  pt("ENDO-02", "Muhammad Haziq", "R-241387", 29, "M", "Endodontics", "Discoloured 21 with sinus tract, trauma 10 years ago", "Med", "Treatment", 4, 4, 5),
+  pt("ENDO-03", "Kavitha Devi", "R-241501", 52, "F", "Endodontics", "Referred for elective RCT on 15 before crown", "Low", "Radiograph", 0, 1, 9),
+  pt("PERIO-01", "Tan Boon Keat", "R-241120", 48, "M", "Periodontology", "Bleeding gums and mobile lower incisors (Stage III, Grade B)", "Med", "Scaling", 0, 3, 1),
+  pt("PERIO-02", "Siti Aminah Yusof", "R-239874", 61, "F", "Periodontology", "Type 2 diabetic, 3-month review after NSPT", "High", DONE_STAGE, 0, 7, 14),
+  pt("OS-01", "Farid Iskandar", "R-241533", 24, "M", "Oral Surgery", "Recurrent pericoronitis around partially erupted 38", "High", "E&D 1", 0, 1, 4),
+  pt("OS-02", "Wong Ah Moi", "R-241498", 70, "F", "Oral Surgery", "On warfarin, grossly carious 47 for extraction", "Med", "E&D 2", 0, 2, 2),
+  pt("PAED-01", "Aisyah Sofea", "R-241466", 7, "F", "Paediatric Dentistry", "Caries on 75 and 84, anxious first visit", "Med", "Treatment", 0, 2, 0),
+  pt("PAED-02", "Daniel Raj", "R-238902", 9, "M", "Paediatric Dentistry", "Recall for fissure sealants on 36 and 46", "High", DONE_STAGE, 0, 4, 21),
+  pt("PAED-03", "Adam Harith", "R-241410", 6, "M", "Paediatric Dentistry", "Early loss of 84, space maintainer needed", "High", "Treatment", 0, 2, 3),
+  pt("ORTHO-01", "Lee Jia Xin", "R-241379", 12, "F", "Orthodontics", "Crowded upper incisors, palatally displaced 22", "High", "Radiograph", 0, 2, 8),
+  pt("OPER-01", "Priya Nair", "R-241302", 31, "F", "Operative / Conservative Dentistry", "Fractured amalgam on 26, food trapping", "High", "Treatment", 0, 3, 2),
+  pt("OPER-02", "Hafiz Rahim", "R-241540", 40, "M", "Operative / Conservative Dentistry", "Sensitive notches at the gumline, 33 to 43", "Low", "E&D 1", 0, 1, 7),
+  pt("GCP-01", "Goh Kok Leong", "R-241215", 55, "M", "General Clinical Practice", "Multiple carious teeth, controlled hypertension", "Med", "Scaling", 0, 4, 4),
+  pt("OMED-01", "Rosnah Ismail", "R-237655", 46, "F", "Oral Pathology / Oral Medicine", "White lacy patches on both cheeks, oral medicine review", "High", DONE_STAGE, 0, 5, 30)
+], makeLabs = () => [
+  { id: "L-101", patientId: "RPROS-01", item: "Upper and lower CD, wax trial insertion", sent: addDays(-6), due: addDays(1), tech: "En. Rahman (Prosthetic Lab A)", contact: "Ext. 2314", status: "In lab" },
+  { id: "L-102", patientId: "FPROS-01", item: "PFM crown on 36", sent: addDays(-9), due: addDays(0), tech: "Pn. Siti (Crown and Bridge Lab)", contact: "Ext. 2320", status: "Returned, try-in pending" },
+  { id: "L-103", patientId: "RPROS-02", item: "Special tray for lower RPD", sent: addDays(-4), due: addDays(-1), tech: "En. Kumar (Prosthetic Lab A)", contact: "012-345 6789", status: "In lab" },
+  { id: "L-104", patientId: "PAED-03", item: "Band and loop space maintainer on 85", sent: addDays(-5), due: addDays(2), tech: "En. Lee (Ortho and Paeds Lab)", contact: "Ext. 2331", status: "In lab" },
+  { id: "L-105", patientId: "RPROS-01", item: "Record blocks (upper and lower)", sent: addDays(-18), due: addDays(-12), tech: "En. Rahman (Prosthetic Lab A)", contact: "Ext. 2314", status: "Try-in passed" }
+];
+function makeCases() {
+  const reqs = Object.fromEntries(makeRequirements().map((r) => [r.id, r])), out = [];
+  let n = 1;
+  const done = (reqId, count, code, start = -160) => {
+    const last = reqs[reqId].stages.length - 1, step = Math.max(4, Math.floor(140 / Math.max(count, 1)));
+    for (let i = 0; i < count; i++) {
+      const d = addDays(Math.min(-2, start + i * step));
+      out.push({ id: `C${n++}`, reqId, patientId: typeof code == "function" ? code(i) : code, stage: last, started: d, updated: d });
+    }
+  }, ip = (reqId, patientId, stage, startOff, updOff) => out.push({ id: `C${n++}`, reqId, patientId, stage, started: addDays(startOff), updated: addDays(updOff) }), h = (code, offset = 0) => (i) => `${code}-H${pad(i + 1 + offset)}`;
+  return done("endo-ant", 2, h("ENDO")), done("perio-nspt", 2, h("PERIO")), done("perio-spt", 1, "PERIO-02", -40), done("perio-spt", 1, h("PERIO", 2), -100), done("paed-rest", 5, h("PAED")), done("paed-pulp", 1, h("PAED", 5), -90), done("paed-ssc", 1, h("PAED", 6), -70), done("paed-prev", 5, h("PAED", 7)), done("paed-prev", 1, "PAED-02", -60), done("os-simple", 8, h("OS")), done("os-m3", 1, h("OS", 8), -50), done("gcp-comp", 1, h("GCP"), -120), done("gcp-med", 2, h("GCP", 1)), done("gcp-emerg", 3, h("GCP", 3)), done("ortho-assess", 1, h("ORTHO"), -80), done("ortho-ceph", 2, h("ORTHO", 1)), done("oper-c2", 7, h("OPER")), done("oper-other", 5, h("OPER", 7)), done("oper-complex", 1, h("OPER", 12), -45), done("oper-pulp", 1, h("OPER", 13), -75), done("fp-crown", 1, h("FPROS"), -110), done("rp-rpd", 1, h("RPROS"), -130), ip("endo-ant", "ENDO-02", 1, -10, -3), ip("endo-mol", "ENDO-01", 0, -1, -1), ip("rp-cd", "RPROS-01", 2, -30, -12), ip("rp-rpd", "RPROS-02", 0, -12, -12), ip("fp-crown", "FPROS-01", 1, -20, -9), ip("fp-post", "FPROS-02", 0, -6, -6), ip("perio-nspt", "PERIO-01", 1, -14, -5), ip("paed-sm", "PAED-03", 0, -5, -5), ip("ortho-assess", "ORTHO-01", 1, -15, -8), ip("oper-pulp", "OPER-01", 0, -3, -3), ip("gcp-comp", "GCP-01", 1, -21, -7), out;
+}
+const topic = (id, discipline, name, stars, mastery, lastOffset, interval) => ({
+  id,
+  discipline,
+  name,
+  stars,
+  mastery,
+  interval,
+  lastReviewed: addDays(lastOffset),
+  nextDue: addDays(lastOffset + interval)
+}), makeTopics = () => [
+  topic("T1", "Periodontology", "Stage III/IV periodontitis: step-wise management", 5, "Review", -5, 5),
+  topic("T2", "Periodontology", "Root surface debridement: instrument selection and technique", 4, "Learning", -2, 3),
+  topic("T3", "Periodontology", "Perio-endo lesions: classification and order of treatment", 5, "Learning", -3, 4),
+  topic("T4", "Periodontology", "2017 AAP/EFP staging and grading", 5, "Mastered", -14, 21),
+  topic("T5", "Paediatric Dentistry", "Pulpotomy vs pulpectomy in primary molars: indications and medicaments", 5, "Review", -6, 6),
+  topic("T6", "Paediatric Dentistry", "Stainless steel crowns and the Hall technique", 4, "Review", -4, 5),
+  topic("T7", "Paediatric Dentistry", "Space maintainers: types, indications and design", 4, "Learning", -1, 2),
+  topic("T8", "Paediatric Dentistry", "Behaviour management: tell-show-do to inhalation sedation", 3, "Mastered", -20, 30),
+  topic("T9", "Oral Surgery", "Surgical extraction: flap design and bone removal", 4, "Review", -3, 6),
+  topic("T10", "Oral Surgery", "Impacted mandibular third molars: Winter's, Pell and Gregory, NICE criteria", 5, "Learning", -2, 2),
+  topic("T11", "Oral Surgery", "Local anaesthesia complications and maximum doses", 5, "Review", -6, 5),
+  topic("T12", "Oral Surgery", "Alveolar osteitis: diagnosis and management", 4, "Mastered", -14, 21),
+  topic("T13", "General Clinical Practice", "Medical emergency protocols: anaphylaxis, hypoglycaemia, cardiac arrest", 5, "Review", -5, 5),
+  topic("T14", "General Clinical Practice", "Patients on anticoagulants: INR thresholds and DOACs", 5, "Learning", -2, 3),
+  topic("T15", "General Clinical Practice", "Infective endocarditis risk and antibiotic prophylaxis", 4, "Review", -8, 9),
+  topic("T16", "General Clinical Practice", "Medically compromised patients: bisphosphonates, denosumab and MRONJ", 4, "Mastered", -10, 25),
+  topic("T17", "Orthodontics", "Removable appliance design: ACCO components", 4, "Learning", -3, 3),
+  topic("T18", "Orthodontics", "Space analysis and crowding assessment", 4, "Review", -4, 6),
+  topic("T19", "Orthodontics", "Cephalometric landmarks and SNA, SNB, ANB", 5, "Learning", -1, 2),
+  topic("T20", "Orthodontics", "IOTN: dental health and aesthetic components", 5, "Mastered", -12, 30),
+  topic("T21", "Operative / Conservative Dentistry", "Complex amalgam and composite: cusp coverage, pins and bonded retention", 4, "Review", -4, 7),
+  topic("T22", "Operative / Conservative Dentistry", "Direct vs indirect pulp capping: materials and outcomes", 5, "Review", -7, 7),
+  topic("T23", "Operative / Conservative Dentistry", "Glass ionomer setting reaction and fluoride release", 3, "Mastered", -10, 25),
+  topic("T24", "Operative / Conservative Dentistry", "Caries risk assessment and minimally invasive preparation", 4, "Learning", -2, 4),
+  topic("T25", "Fixed Prosthodontics", "PFM vs all-ceramic crown preps: reduction depths and margins", 5, "Review", -5, 5),
+  topic("T26", "Fixed Prosthodontics", "Impression techniques: putty-wash and gingival retraction", 4, "Learning", -1, 2),
+  topic("T27", "Fixed Prosthodontics", "Post and core: indications, post length and ferrule", 5, "Learning", -3, 4),
+  topic("T28", "Fixed Prosthodontics", "Elastomeric impression materials compared", 3, "Mastered", -15, 30),
+  topic("T29", "Removable Prosthodontics", "Complete denture trial insertion: checks and common faults", 5, "Review", -6, 6),
+  topic("T30", "Removable Prosthodontics", "RPD major connectors: selection by Kennedy class", 4, "Learning", -2, 3),
+  topic("T31", "Removable Prosthodontics", "Jaw registration: OVD and RVD methods", 4, "Review", -5, 8),
+  topic("T32", "Removable Prosthodontics", "Surveying and guide planes", 3, "Mastered", -18, 30),
+  topic("T33", "Endodontics", "Access cavity design and locating MB2", 5, "Review", -4, 4),
+  topic("T34", "Endodontics", "Irrigation protocols: NaOCl, EDTA and activation", 4, "Learning", -2, 3),
+  topic("T35", "Endodontics", "Managing ledges, separated files and perforations", 4, "Learning", -3, 5),
+  topic("T36", "Endodontics", "Obturation: cold lateral vs warm vertical compaction", 3, "Mastered", -16, 30),
+  topic("T37", "Oral Pathology / Oral Medicine", "Odontogenic keratocyst vs ameloblastoma: radiographic features", 5, "Review", -7, 7),
+  topic("T38", "Oral Pathology / Oral Medicine", "Oral lichen planus: clinical types and malignant potential", 4, "Learning", -2, 3),
+  topic("T39", "Oral Pathology / Oral Medicine", "Potentially malignant disorders: leukoplakia and erythroplakia", 5, "Review", -3, 6),
+  topic("T40", "Oral Pathology / Oral Medicine", "Salivary gland tumours: pleomorphic adenoma and others", 4, "Mastered", -20, 30)
+], makeJournal = () => [
+  {
+    id: "J6",
+    date: addDays(-1),
+    discipline: "Endodontics",
+    patientId: "ENDO-01",
+    description: "Access cavity and working length on 46. Found MB2 after troughing along the MB\u2013ML groove with an ultrasonic tip. Four canals negotiated to a size 15 K-file.",
+    feedback: "Dr. Lim: Good use of the apex locator, but confirm with a working length radiograph before shaping to full length. The rubber dam leaked around the clamp; use Oraseal next time.",
+    takeaways: "Minor ledge in the ML canal, bypassed with a pre-curved 10 K-file and EDTA. Slow down when the file stops feeling sticky.",
+    actionPlan: "Pre-curve all files for curved molar canals. Revise crown-down vs step-back before the next visit.",
+    tags: ["#FacultyPearl", "#Complication"]
+  },
+  {
+    id: "J5",
+    date: addDays(-3),
+    discipline: "Oral Surgery",
+    patientId: "OS-H08",
+    description: "Forceps extraction of retained roots of 36 under IANB and long buccal. Needed to section with a fissure bur and elevate each root separately.",
+    feedback: "Dr. Farah asked what confirms a successful IANB and what to do if the block fails. I answered lip numbness and tongue tingling but missed intraligamentary backup.",
+    takeaways: "Lip numbness alone does not guarantee pulpal anaesthesia. Know the backup techniques: Gow-Gates, intraligamentary, articaine buccal infiltration.",
+    actionPlan: "Read the Gow-Gates technique and practise on the skull model this week.",
+    tags: ["#ChairsideViva"]
+  },
+  {
+    id: "J4",
+    date: addDays(-5),
+    discipline: "Periodontology",
+    patientId: "PERIO-01",
+    description: "Full-mouth 6-point charting and first half of RSD. Charting took 70 minutes, which left little time for instrumentation.",
+    feedback: "Dr. Tan: Chart with the nurse recording to halve the time. Adapt the Gracey 11/12 with the lower shank parallel to the tooth surface.",
+    takeaways: "Lower back pain by the end of the session. I was leaning forward instead of adjusting chair height and patient position.",
+    actionPlan: "Set the patient's mouth at elbow height before starting. Use indirect vision for upper palatal surfaces.",
+    tags: ["#Ergonomics", "#FacultyPearl"]
+  },
+  {
+    id: "J3",
+    date: addDays(-7),
+    discipline: "Paediatric Dentistry",
+    patientId: "PAED-01",
+    description: "First visit for an anxious 7-year-old. History, examination and fluoride varnish only. Used tell-show-do with the slow handpiece on a fingernail.",
+    feedback: "Dr. Aishah: Good pacing. Speak to the child, not the parent, and keep the first visit short so it ends on a positive note.",
+    takeaways: 'Acclimatisation visits pay off. The child agreed to come back for "tooth painting".',
+    actionPlan: "Plan a Hall crown on 84 and a conventional restoration on 75 over two short visits.",
+    tags: ["#FacultyPearl"]
+  },
+  {
+    id: "J2",
+    date: addDays(-9),
+    discipline: "Fixed Prosthodontics",
+    patientId: "FPROS-01",
+    description: "PFM crown preparation on 36 using depth grooves, then a double-cord impression.",
+    feedback: "Dr. Wong: Buccal reduction was only about 0.8 mm at the shoulder. A PFM needs 1.2 to 1.5 mm for metal plus porcelain. Check reduction with a putty index.",
+    takeaways: "The retraction cord displaced on the first impression and the distal margin was not captured, so I retook it.",
+    actionPlan: "Make a putty reduction index before every crown prep.",
+    tags: ["#FacultyPearl", "#Complication"]
+  },
+  {
+    id: "J1",
+    date: addDays(-10),
+    discipline: "Removable Prosthodontics",
+    patientId: "RPROS-01",
+    description: "Secondary impressions for complete dentures using border moulding with greenstick and a zinc oxide\u2013eugenol wash.",
+    feedback: "Dr. Wong: The lower lingual periphery was under-extended. Ask the patient to push the tongue into each cheek during moulding.",
+    takeaways: "The lab flagged a torn distal periphery on the upper impression, so it had to be retaken. Check impressions under good light before disinfecting.",
+    actionPlan: "Checklist before sending impressions: periphery intact, post dam recorded, disinfected and labelled.",
+    tags: ["#Complication"]
+  }
+], tip = (id, offset, discipline, lecture, lecturer, text, formats, emphasis, revised = !1) => ({ id, date: addDays(offset), discipline, lecture, lecturer, tip: text, formats, emphasis, revised, topicId: "", sample: !0 }), makeTips = () => [
+  tip(
+    "X1",
+    -3,
+    "General Clinical Practice",
+    "Medical emergencies in the dental clinic",
+    "Dr. Hanim",
+    "Anaphylaxis: adrenaline 1:1000, 0.5 mg (0.5 ml) IM into the anterolateral thigh for an adult, repeated after 5 minutes if there is no improvement. Expect it as an OSCE station with a manikin.",
+    ["OSCE", "Viva"],
+    "Will come out"
+  ),
+  tip(
+    "X2",
+    -6,
+    "Fixed Prosthodontics",
+    "Principles of tooth preparation",
+    "Dr. Wong",
+    "Viva favourite: list the five principles of tooth preparation. Preservation of tooth structure, retention and resistance form, structural durability, marginal integrity, preservation of the periodontium.",
+    ["Viva"],
+    "Emphasised",
+    !0
+  ),
+  tip(
+    "X3",
+    -9,
+    "Oral Surgery",
+    "Local anaesthesia and its complications",
+    "Dr. Farah",
+    "Be able to work out the maximum LA dose for a given body weight. Lidocaine 2% with 1:80,000 adrenaline: 4.4 mg/kg up to 300 mg, and each 2.2 ml cartridge contains 44 mg.",
+    ["MCQ / SBA", "OSCE"],
+    "Will come out"
+  ),
+  tip(
+    "X4",
+    -12,
+    "Endodontics",
+    "Endodontic emergencies",
+    "Dr. Lim",
+    "Know how to tell symptomatic irreversible pulpitis from symptomatic apical periodontitis, and the emergency management of each. Came out as an SAQ two years in a row.",
+    ["SAQ / Essay", "Viva"],
+    "Will come out"
+  ),
+  tip(
+    "X5",
+    -15,
+    "Paediatric Dentistry",
+    "Pulp therapy in primary teeth",
+    "Dr. Aishah",
+    "Indications and contraindications for pulpotomy vs pulpectomy, and the medicaments for each: MTA, Biodentine or ferric sulphate for pulpotomy; zinc oxide\u2013eugenol or iodoform paste for pulpectomy.",
+    ["SAQ / Essay", "MCQ / SBA"],
+    "Emphasised"
+  ),
+  tip(
+    "X6",
+    -18,
+    "Oral Pathology / Oral Medicine",
+    "Odontogenic cysts and tumours",
+    "Prof. Kamal",
+    "Spot diagnosis: multilocular radiolucency at the angle of the mandible. Give differentials in order: ameloblastoma, odontogenic keratocyst, central giant cell granuloma, odontogenic myxoma.",
+    ["OSCE", "Viva"],
+    "Emphasised"
+  ),
+  tip(
+    "X7",
+    -20,
+    "Periodontology",
+    "Classification of periodontal diseases",
+    "Dr. Tan",
+    "You will be given a case to stage and grade. Stage uses the worst interdental CAL, radiographic bone loss and teeth lost to periodontitis. Grade uses % bone loss divided by age: under 0.25 is A, 0.25 to 1.0 is B, over 1.0 is C.",
+    ["SAQ / Essay", "Clinical exam"],
+    "Will come out"
+  ),
+  tip(
+    "X8",
+    -25,
+    "Orthodontics",
+    "Cephalometric analysis",
+    "Dr. Siva",
+    "Normal values: SNA 81 \xB1 3\xB0, SNB 78 \xB1 3\xB0, ANB 3 \xB1 2\xB0. ANB above 4\xB0 suggests a Class II skeletal pattern and below 2\xB0 a Class III.",
+    ["MCQ / SBA"],
+    "Mentioned",
+    !0
+  )
+], makeDefaults = () => ({
+  patients: makePatients(),
+  labs: makeLabs(),
+  requirements: makeRequirements(),
+  cases: makeCases(),
+  topics: makeTopics(),
+  journal: makeJournal(),
+  tips: makeTips()
+}), STORE_KEY = "chairside.v2", SLICES = ["patients", "labs", "requirements", "cases", "topics", "journal"];
+function storageAvailable() {
+  try {
+    const k = "__chairside_test";
+    return window.localStorage.setItem(k, "1"), window.localStorage.removeItem(k), !0;
+  } catch {
+    return !1;
+  }
+}
+const num = (v, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d, str = (v, d = "") => typeof v == "string" ? v : v == null ? d : String(v);
+function sanitizeData(obj) {
+  const d = obj && typeof obj == "object" && obj.data && typeof obj.data == "object" ? obj.data : obj;
+  if (!d || typeof d != "object" || SLICES.some((k) => !Array.isArray(d[k]))) return null;
+  const isObj = (x) => x && typeof x == "object", requirements = d.requirements.filter(isObj).map((r, i) => {
+    const stages = Array.isArray(r.stages) ? r.stages.map((s) => str(s).trim()).filter(Boolean) : [];
+    return {
+      id: str(r.id, `req-${i}`),
+      discipline: str(r.discipline, CLINICAL[0].key),
+      name: str(r.name, "Untitled requirement"),
+      target: Math.max(1, Math.round(num(r.target, 1))),
+      stages: stages.length ? stages : ["Completed"],
+      baseDone: Math.max(0, Math.round(num(r.baseDone))),
+      baseIP: Math.max(0, Math.round(num(r.baseIP)))
+    };
+  }), stageCount = Object.fromEntries(requirements.map((r) => [r.id, r.stages.length]));
+  return {
+    patients: d.patients.filter(isObj).map((p) => {
+      const discipline = str(p.discipline || p.specialty, CLINICAL[0].key), steps = stepsFor(discipline);
+      let txStep = Math.max(0, Math.round(num(p.txStep)));
+      return p.stage === "Lab Stage" && steps && steps.includes("Lab work") && (txStep = steps.indexOf("Lab work")), txStep = steps ? Math.min(txStep, steps.length - 1) : 0, {
+        id: str(p.id),
+        name: str(p.name),
+        regNo: str(p.regNo),
+        age: num(p.age),
+        gender: str(p.gender, "F"),
+        discipline,
+        complaint: str(p.complaint),
+        reliability: RELIABILITY.includes(p.reliability) ? p.reliability : "Med",
+        stage: STAGES.includes(p.stage) ? p.stage : LEGACY_STAGE[p.stage] || "E&D 1",
+        txStep,
+        visits: Math.max(0, Math.round(num(p.visits))),
+        nextAppt: str(p.nextAppt),
+        archived: !!p.archived
+      };
+    }).filter((p) => p.id),
+    labs: d.labs.filter(isObj).map((l, i) => ({
+      id: str(l.id, `L-${i}`),
+      patientId: str(l.patientId),
+      item: str(l.item),
+      sent: str(l.sent, TODAY_ISO),
+      due: str(l.due, TODAY_ISO),
+      tech: str(l.tech),
+      contact: str(l.contact),
+      status: LAB_STATUSES.includes(l.status) ? l.status : "In lab"
+    })),
+    requirements,
+    cases: d.cases.filter((c) => isObj(c) && stageCount[c.reqId]).map((c, i) => ({
+      id: str(c.id, `C-${i}`),
+      reqId: c.reqId,
+      patientId: str(c.patientId),
+      stage: Math.min(stageCount[c.reqId] - 1, Math.max(0, Math.round(num(c.stage)))),
+      started: str(c.started, TODAY_ISO),
+      updated: str(c.updated || c.started, TODAY_ISO)
+    })),
+    topics: d.topics.filter(isObj).map((t, i) => ({
+      id: str(t.id, `T-${i}`),
+      discipline: str(t.discipline || t.subject, DISCIPLINES[0].key),
+      name: str(t.name),
+      stars: Math.min(5, Math.max(1, Math.round(num(t.stars, 3)))),
+      mastery: MASTERY.includes(t.mastery) ? t.mastery : "Learning",
+      interval: Math.max(1, Math.round(num(t.interval, 1))),
+      lastReviewed: str(t.lastReviewed, TODAY_ISO),
+      nextDue: str(t.nextDue, TODAY_ISO)
+    })).filter((t) => t.name),
+    journal: d.journal.filter(isObj).map((j, i) => ({
+      id: str(j.id, `J-${i}`),
+      date: str(j.date, TODAY_ISO),
+      discipline: str(j.discipline || j.specialty, DISCIPLINES[0].key),
+      patientId: str(j.patientId),
+      description: str(j.description),
+      feedback: str(j.feedback),
+      takeaways: str(j.takeaways),
+      actionPlan: str(j.actionPlan),
+      tags: Array.isArray(j.tags) ? j.tags.map((t) => str(t)) : []
+    })),
+    tips: Array.isArray(d.tips) ? d.tips.filter(isObj).map((t, i) => ({
+      id: str(t.id, `X-${i}`),
+      date: str(t.date, TODAY_ISO),
+      discipline: str(t.discipline, DISCIPLINES[0].key),
+      lecture: str(t.lecture),
+      lecturer: str(t.lecturer),
+      tip: str(t.tip),
+      formats: Array.isArray(t.formats) ? t.formats.filter((x) => EXAM_FORMATS.includes(x)) : [],
+      emphasis: EMPHASIS.includes(t.emphasis) ? t.emphasis : "Mentioned",
+      revised: !!t.revised,
+      topicId: str(t.topicId),
+      sample: !!t.sample
+    })).filter((t) => t.tip) : makeTips()
+  };
+}
+function loadSaved() {
+  try {
+    const raw = window.localStorage.getItem(STORE_KEY);
+    return raw ? sanitizeData(JSON.parse(raw)) : null;
+  } catch {
+    return null;
+  }
+}
+const summarize = (d) => `${plural(d.patients.length, "patient")}, ${plural(d.requirements.length, "requirement")}, ${plural(d.cases.length, "logged case")}, ${plural(d.topics.length, "study topic")}, ${plural(d.journal.length, "journal entry", "journal entries")} and ${plural((d.tips || []).length, "exam tip")}`, inputCls = "w-full rounded-lg border border-line bg-surface px-3 py-2 text-[15px] text-ink placeholder:text-muted focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/30", btnPrimary = "inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-3.5 py-2 text-sm font-bold text-onaccent hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed", btnGhost = "inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm font-bold text-ink hover:bg-surface2 transition disabled:opacity-40", btnDanger = "inline-flex items-center justify-center gap-2 rounded-lg bg-danger px-3.5 py-2 text-sm font-bold text-onaccent hover:opacity-90 transition", linkBtn = "font-bold text-accent hover:underline";
+function DiscChip({ name, short }) {
+  const s = discInfo(name);
+  return /* @__PURE__ */ React.createElement(
+    "span",
+    {
+      className: "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-bold whitespace-nowrap",
+      style: { color: `color-mix(in srgb, ${s.hue} 78%, rgb(var(--ink)))`, background: `color-mix(in srgb, ${s.hue} 14%, transparent)` },
+      title: s.key
+    },
+    /* @__PURE__ */ React.createElement("span", { className: "h-1.5 w-1.5 rounded-full", style: { background: s.hue } }),
+    short ? s.short : s.key
+  );
+}
+function Pill({ tone = "neutral", children }) {
+  return /* @__PURE__ */ React.createElement("span", { className: `inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-bold whitespace-nowrap ${{
+    neutral: "bg-surface2 text-muted",
+    accent: "bg-accentsoft text-accentink",
+    warn: "bg-warnsoft text-warn",
+    danger: "bg-dangersoft text-danger",
+    ok: "bg-oksoft text-ok"
+  }[tone]}` }, children);
+}
+const stageTone = { "E&D 1": "neutral", "E&D 2": "neutral", Radiograph: "neutral", Scaling: "accent", Treatment: "accent", [DONE_STAGE]: "ok" };
+function StageFields({ idPrefix, f, setF }) {
+  const steps = stepsFor(f.discipline);
+  return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Field, { label: "Treatment stage" }, /* @__PURE__ */ React.createElement("select", { id: `${idPrefix}-stage`, className: inputCls, value: f.stage, onChange: (e) => setF({ ...f, stage: e.target.value }) }, STAGES.map((s) => /* @__PURE__ */ React.createElement("option", { key: s }, s)))), f.stage === "Treatment" && steps && /* @__PURE__ */ React.createElement(Field, { label: `${f.discipline} step`, hint: `Step ${Math.min(f.txStep || 0, steps.length - 1) + 1} of ${steps.length}` }, /* @__PURE__ */ React.createElement("select", { id: `${idPrefix}-step`, className: inputCls, value: Math.min(f.txStep || 0, steps.length - 1), onChange: (e) => setF({ ...f, txStep: Number(e.target.value) }) }, steps.map((s, i) => /* @__PURE__ */ React.createElement("option", { key: s, value: i }, i + 1, ". ", s)))));
+}
+function IdentityFields({ idPrefix, f, setF }) {
+  return /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-1 gap-3 sm:grid-cols-[3fr_2fr]" }, /* @__PURE__ */ React.createElement(Field, { label: "Patient name" }, /* @__PURE__ */ React.createElement("input", { id: `${idPrefix}-name`, className: inputCls, value: f.name || "", onChange: (e) => setF({ ...f, name: e.target.value }), autoComplete: "off" })), /* @__PURE__ */ React.createElement(Field, { label: "Registration no." }, /* @__PURE__ */ React.createElement("input", { id: `${idPrefix}-reg`, className: inputCls, value: f.regNo || "", onChange: (e) => setF({ ...f, regNo: e.target.value }), autoComplete: "off" })));
+}
+const cleanPatient = (f) => {
+  const steps = stepsFor(f.discipline);
+  return {
+    ...f,
+    name: (f.name || "").trim(),
+    regNo: (f.regNo || "").trim(),
+    age: Number(f.age),
+    complaint: f.complaint.trim(),
+    visits: Math.max(0, Number(f.visits) || 0),
+    txStep: steps ? Math.min(Number(f.txStep) || 0, steps.length - 1) : 0
+  };
+};
+function Field({ label, children, hint, className = "" }) {
+  return /* @__PURE__ */ React.createElement("label", { className: `block ${className}` }, /* @__PURE__ */ React.createElement("span", { className: "mb-1 block text-sm font-bold text-ink" }, label), children, hint && /* @__PURE__ */ React.createElement("span", { className: "mt-1 block text-xs text-muted" }, hint));
+}
+function SearchBox({ value, onChange, placeholder, id }) {
+  return /* @__PURE__ */ React.createElement("div", { className: "relative flex-1 min-w-[200px]" }, /* @__PURE__ */ React.createElement(Icon, { name: "Search", size: 16, className: "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" }), /* @__PURE__ */ React.createElement("input", { id, type: "search", value, onChange: (e) => onChange(e.target.value), placeholder, className: `${inputCls} pl-9`, "aria-label": placeholder }));
+}
+function Stars({ value, onChange, size = 15 }) {
+  return /* @__PURE__ */ React.createElement("span", { className: "inline-flex", role: onChange ? "radiogroup" : void 0, "aria-label": `High-yield rating ${value} of 5` }, [1, 2, 3, 4, 5].map((i) => {
+    const filled = i <= value, star = /* @__PURE__ */ React.createElement("span", { className: filled ? "text-warn" : "text-line" }, /* @__PURE__ */ React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: filled ? "currentColor" : "none", stroke: "currentColor", strokeWidth: "1.8", "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("path", { d: "M12 3.5l2.6 5.3 5.9.9-4.25 4.1 1 5.8L12 16.9l-5.25 2.7 1-5.8L3.5 9.7l5.9-.9z", strokeLinejoin: "round" })));
+    return onChange ? /* @__PURE__ */ React.createElement("button", { key: i, type: "button", onClick: () => onChange(i), className: "p-0.5 rounded", "aria-label": `${i} star${i > 1 ? "s" : ""}` }, star) : /* @__PURE__ */ React.createElement("span", { key: i, className: "p-px" }, star);
+  }));
+}
+function QuotaBar({ done, ipFractions, baseIP, target, hue, label }) {
+  const ipCount = ipFractions.length + baseIP, units = Math.max(target, done + ipCount, 1), u = 100 / units, hatch = `repeating-linear-gradient(135deg, ${hue} 0 2px, transparent 2px 6px)`;
+  return /* @__PURE__ */ React.createElement("div", { className: "relative h-3 w-full overflow-hidden rounded-full bg-surface2", role: "img", "aria-label": label }, /* @__PURE__ */ React.createElement("div", { className: "absolute inset-y-0 left-0", style: { width: `${done * u}%`, background: hue } }), ipFractions.map((f, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "absolute inset-y-0 border-l-2 border-surface", style: { left: `${(done + i) * u}%`, width: `${u}%`, background: hatch, opacity: 0.9 } }, /* @__PURE__ */ React.createElement("div", { className: "h-full", style: { width: `${f * 100}%`, background: hue, opacity: 0.5 } }))), Array.from({ length: baseIP }).map((_, i) => /* @__PURE__ */ React.createElement("div", { key: `b${i}`, className: "absolute inset-y-0 border-l-2 border-surface", style: { left: `${(done + ipFractions.length + i) * u}%`, width: `${u}%`, background: hatch, opacity: 0.9 } })), units > target && /* @__PURE__ */ React.createElement("div", { className: "absolute inset-y-0 w-0.5 bg-ink", style: { left: `${target / units * 100}%` } }));
+}
+function NumberStepper({ id, label, value, onChange, floor = 0, floorHint }) {
+  const [draft, setDraft] = useState(String(value));
+  useEffect(() => {
+    setDraft(String(value));
+  }, [value]);
+  const commit = () => {
+    const n = parseInt(draft, 10);
+    if (isNaN(n)) {
+      setDraft(String(value));
+      return;
+    }
+    const v = Math.max(floor, n);
+    v !== value ? onChange(v) : setDraft(String(value));
+  }, atFloor = value <= floor;
+  return /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1.5" }, /* @__PURE__ */ React.createElement("label", { htmlFor: id, className: "text-xs font-bold text-muted" }, label), /* @__PURE__ */ React.createElement("div", { className: "inline-flex items-center rounded-lg border border-line bg-surface focus-within:border-accent" }, /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      type: "button",
+      onClick: () => onChange(value - 1),
+      disabled: atFloor,
+      "aria-label": `Decrease ${label.toLowerCase()}`,
+      title: atFloor && floorHint ? floorHint : void 0,
+      className: "rounded-l-lg px-1.5 py-1 text-muted hover:bg-surface2 hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
+    },
+    /* @__PURE__ */ React.createElement(Icon, { name: "Minus", size: 14 })
+  ), /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      id,
+      type: "text",
+      inputMode: "numeric",
+      value: draft,
+      "aria-label": label,
+      onChange: (e) => setDraft(e.target.value.replace(/[^0-9]/g, "").slice(0, 3)),
+      onBlur: commit,
+      onKeyDown: (e) => {
+        e.key === "Enter" && e.currentTarget.blur();
+      },
+      className: "w-9 bg-transparent py-1 text-center text-sm font-bold tabular-nums text-ink focus:outline-none"
+    }
+  ), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      type: "button",
+      onClick: () => onChange(value + 1),
+      "aria-label": `Increase ${label.toLowerCase()}`,
+      className: "rounded-r-lg px-1.5 py-1 text-muted hover:bg-surface2 hover:text-ink"
+    },
+    /* @__PURE__ */ React.createElement(Icon, { name: "Plus", size: 14 })
+  )));
+}
+function Section({ title, action, children, className = "", accent }) {
+  return /* @__PURE__ */ React.createElement("section", { className: `rounded-2xl border border-line bg-surface ${className}` }, (title || action) && /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3 sm:px-5", style: accent ? { boxShadow: `inset 4px 0 0 ${accent}` } : void 0 }, /* @__PURE__ */ React.createElement("h2", { className: "text-base font-bold text-ink" }, title), action), children);
+}
+function PageHead({ title, sub, action }) {
+  return /* @__PURE__ */ React.createElement("div", { className: "mb-5 flex flex-wrap items-end justify-between gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "min-w-0" }, /* @__PURE__ */ React.createElement("h1", { className: "text-2xl sm:text-[28px] font-bold leading-tight tracking-tight text-ink", style: { textWrap: "balance" } }, title), sub && /* @__PURE__ */ React.createElement("p", { className: "mt-1 max-w-[65ch] text-[15px] text-muted" }, sub)), action);
+}
+function Empty({ icon, title, children }) {
+  return /* @__PURE__ */ React.createElement("div", { className: "px-5 py-10 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-surface2 text-muted" }, /* @__PURE__ */ React.createElement(Icon, { name: icon })), /* @__PURE__ */ React.createElement("p", { className: "font-bold text-ink" }, title), children && /* @__PURE__ */ React.createElement("p", { className: "mt-1 text-sm text-muted" }, children));
+}
+function Notice({ tone = "neutral", children }) {
+  return /* @__PURE__ */ React.createElement("p", { className: `rounded-lg px-3 py-2 text-sm font-bold ${{ neutral: "bg-surface2 text-ink", ok: "bg-oksoft text-ok", warn: "bg-warnsoft text-warn", danger: "bg-dangersoft text-danger" }[tone]}`, role: "status" }, children);
+}
+function Modal({ title, onClose, children, footer }) {
+  const ref = useRef(null);
+  return useEffect(() => {
+    const onKey = (e) => {
+      e.key === "Escape" && onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    const first = ref.current && ref.current.querySelector("input:not([type=file]):not([type=checkbox]), select, textarea");
+    first ? first.focus() : ref.current && ref.current.focus();
+    const prev = document.body.style.overflow;
+    return document.body.style.overflow = "hidden", () => {
+      document.removeEventListener("keydown", onKey), document.body.style.overflow = prev;
+    };
+  }, []), /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 z-50 flex items-end justify-end sm:items-stretch", role: "dialog", "aria-modal": "true", "aria-label": title }, /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 bg-ink/40 fade-in", onClick: onClose }), /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      ref,
+      tabIndex: -1,
+      className: "slide-in relative flex max-h-[92vh] w-full flex-col rounded-t-2xl bg-surface shadow-2xl focus:outline-none sm:max-h-none sm:h-full sm:max-w-lg sm:rounded-none sm:rounded-l-2xl",
+      style: { paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }
+    },
+    /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between border-b border-line px-5 py-4" }, /* @__PURE__ */ React.createElement("h2", { className: "text-lg font-bold text-ink" }, title), /* @__PURE__ */ React.createElement("button", { onClick: onClose, className: "rounded-lg p-1.5 text-muted hover:bg-surface2", "aria-label": "Close" }, /* @__PURE__ */ React.createElement(Icon, { name: "X" }))),
+    /* @__PURE__ */ React.createElement("div", { className: "flex-1 overflow-y-auto px-5 py-4 space-y-4" }, children),
+    footer && /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap justify-end gap-2 border-t border-line px-5 py-3" }, footer)
+  ));
+}
+function DisciplineSelect({ id, value, onChange, clinicalOnly, includeAll, counts }) {
+  return /* @__PURE__ */ React.createElement("select", { id, className: inputCls, value, onChange: (e) => onChange(e.target.value) }, includeAll && /* @__PURE__ */ React.createElement("option", { value: "All" }, includeAll), (clinicalOnly ? CLINICAL : DISCIPLINES).map((d) => /* @__PURE__ */ React.createElement("option", { key: d.key, value: d.key }, d.key, counts && counts[d.key] ? ` (${counts[d.key]})` : "")));
+}
+function nextPatientId(patients, discipline) {
+  const code = discInfo(discipline).code, nums = patients.filter((p) => p.id.startsWith(code + "-")).map((p) => parseInt(p.id.split("-")[1], 10)).filter((n) => !isNaN(n));
+  return `${code}-${pad((nums.length ? Math.max(...nums) : 0) + 1)}`;
+}
+function PatientForm({ patients, onSave, onClose }) {
+  const [f, setF] = useState({ discipline: "Endodontics", name: "", regNo: "", age: "", gender: "F", complaint: "", reliability: "High", stage: "E&D 1", txStep: 0, visits: 1, nextAppt: addDays(7) }), [err, setErr] = useState(""), id = nextPatientId(patients, f.discipline), set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  return /* @__PURE__ */ React.createElement(Modal, { title: "Add patient", onClose, footer: /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("button", { className: btnGhost, onClick: onClose }, "Cancel"), /* @__PURE__ */ React.createElement("button", { className: btnPrimary, onClick: () => {
+    if (!f.age || !f.complaint.trim()) {
+      setErr("Add the age and chief complaint to save this patient.");
+      return;
+    }
+    onSave({ ...cleanPatient(f), id });
+  } }, "Add patient")) }, /* @__PURE__ */ React.createElement("div", { className: "rounded-lg bg-surface2 px-3 py-2 text-sm text-muted" }, "Patient code ", /* @__PURE__ */ React.createElement("span", { className: "font-bold text-ink" }, id), " is used in your quota logs and journal."), /* @__PURE__ */ React.createElement(IdentityFields, { idPrefix: "pf", f, setF }), /* @__PURE__ */ React.createElement(Field, { label: "Discipline" }, /* @__PURE__ */ React.createElement(DisciplineSelect, { id: "pf-disc", value: f.discipline, onChange: (v) => setF({ ...f, discipline: v }) })), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3" }, /* @__PURE__ */ React.createElement(Field, { label: "Age" }, /* @__PURE__ */ React.createElement("input", { id: "pf-age", type: "number", min: "1", max: "110", className: inputCls, value: f.age, onChange: set("age") })), /* @__PURE__ */ React.createElement(Field, { label: "Gender" }, /* @__PURE__ */ React.createElement("select", { id: "pf-gender", className: inputCls, value: f.gender, onChange: set("gender") }, /* @__PURE__ */ React.createElement("option", { value: "F" }, "Female"), /* @__PURE__ */ React.createElement("option", { value: "M" }, "Male")))), /* @__PURE__ */ React.createElement(Field, { label: "Chief complaint", hint: "In the patient's words where possible." }, /* @__PURE__ */ React.createElement("textarea", { id: "pf-cc", rows: "2", className: inputCls, value: f.complaint, onChange: set("complaint"), placeholder: "e.g. Pain on biting on lower left back tooth" })), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3" }, /* @__PURE__ */ React.createElement(Field, { label: "Reliability" }, /* @__PURE__ */ React.createElement("select", { id: "pf-rel", className: inputCls, value: f.reliability, onChange: set("reliability") }, RELIABILITY.map((r) => /* @__PURE__ */ React.createElement("option", { key: r }, r)))), /* @__PURE__ */ React.createElement("div", { className: "flex items-end pb-1.5" }, /* @__PURE__ */ React.createElement(NumberStepper, { id: "pf-visits", label: "Visits so far", value: Number(f.visits) || 0, onChange: (v) => setF({ ...f, visits: v }) }))), /* @__PURE__ */ React.createElement(StageFields, { idPrefix: "pf", f, setF }), /* @__PURE__ */ React.createElement(Field, { label: "Next appointment" }, /* @__PURE__ */ React.createElement("input", { id: "pf-next", type: "date", className: inputCls, value: f.nextAppt, onChange: set("nextAppt") })), err && /* @__PURE__ */ React.createElement(Notice, { tone: "danger" }, err));
+}
+function LabForm({ patients, onSave, onClose }) {
+  const firstPros = patients.find((p) => /PROS/.test(p.id)) || patients[0] || {}, [f, setF] = useState({ patientId: firstPros.id || "", item: "", sent: TODAY_ISO, due: addDays(7), tech: "", contact: "", status: "In lab" }), [err, setErr] = useState(""), set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  return /* @__PURE__ */ React.createElement(Modal, { title: "Send lab case", onClose, footer: /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("button", { className: btnGhost, onClick: onClose }, "Cancel"), /* @__PURE__ */ React.createElement("button", { className: btnPrimary, onClick: () => {
+    if (!f.item.trim() || !f.patientId) {
+      setErr("Add the patient and lab case to save.");
+      return;
+    }
+    if (f.due < f.sent) {
+      setErr("The target return date is before the date sent.");
+      return;
+    }
+    onSave({ ...f, item: f.item.trim(), id: `L-${Date.now().toString().slice(-6)}` });
+  } }, "Add lab case")) }, /* @__PURE__ */ React.createElement(Field, { label: "Patient" }, /* @__PURE__ */ React.createElement("select", { id: "lf-pt", className: inputCls, value: f.patientId, onChange: set("patientId") }, patients.map((p) => /* @__PURE__ */ React.createElement("option", { key: p.id, value: p.id }, p.id, ", ", discInfo(p.discipline).short)))), /* @__PURE__ */ React.createElement(Field, { label: "Lab case" }, /* @__PURE__ */ React.createElement("input", { id: "lf-item", className: inputCls, value: f.item, onChange: set("item"), placeholder: "e.g. Cobalt-chrome RPD framework" })), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3" }, /* @__PURE__ */ React.createElement(Field, { label: "Date sent" }, /* @__PURE__ */ React.createElement("input", { id: "lf-sent", type: "date", className: inputCls, value: f.sent, onChange: set("sent") })), /* @__PURE__ */ React.createElement(Field, { label: "Target return" }, /* @__PURE__ */ React.createElement("input", { id: "lf-due", type: "date", className: inputCls, value: f.due, onChange: set("due") }))), /* @__PURE__ */ React.createElement(Field, { label: "Technician" }, /* @__PURE__ */ React.createElement("input", { id: "lf-tech", className: inputCls, value: f.tech, onChange: set("tech"), placeholder: "e.g. En. Rahman (Prosthetic Lab A)" })), /* @__PURE__ */ React.createElement(Field, { label: "Contact" }, /* @__PURE__ */ React.createElement("input", { id: "lf-contact", className: inputCls, value: f.contact, onChange: set("contact"), placeholder: "Extension or phone" })), /* @__PURE__ */ React.createElement(Field, { label: "Try-in status" }, /* @__PURE__ */ React.createElement("select", { id: "lf-status", className: inputCls, value: f.status, onChange: set("status") }, LAB_STATUSES.map((s) => /* @__PURE__ */ React.createElement("option", { key: s }, s)))), err && /* @__PURE__ */ React.createElement(Notice, { tone: "danger" }, err));
+}
+function StagePicker({ stages, value, lockedThrough, onChange }) {
+  return /* @__PURE__ */ React.createElement("ol", { className: "flex flex-wrap items-center gap-1", "aria-label": "Stage reached" }, stages.map((s, i) => {
+    const locked = lockedThrough != null && i <= lockedThrough, reached = i <= value, selected = i === value;
+    return /* @__PURE__ */ React.createElement("li", { key: i, className: "flex items-center gap-1" }, i > 0 && /* @__PURE__ */ React.createElement(Icon, { name: "ChevronRight", size: 14, className: "text-muted" }), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        disabled: locked,
+        onClick: () => onChange(i),
+        "aria-pressed": selected,
+        className: `rounded-lg border px-2.5 py-1.5 text-sm font-bold transition ${selected ? "border-accent bg-accent text-onaccent" : reached ? "border-accent/50 bg-accentsoft text-accentink" : "border-line bg-surface text-muted hover:border-accent/60 hover:text-ink"} ${locked ? "cursor-default opacity-70" : ""}`
+      },
+      locked && /* @__PURE__ */ React.createElement(Icon, { name: "Check", size: 13, className: "mr-1 inline -mt-0.5" }),
+      i + 1,
+      ". ",
+      s
+    ));
+  }));
+}
+function LogCaseForm({ patients, requirements, cases, preset, presetDiscipline, onSave, onClose }) {
+  const presetReq = requirements.find((r2) => r2.id === preset), firstDisc = presetReq ? presetReq.discipline : presetDiscipline || (requirements[0] ? requirements[0].discipline : CLINICAL[0].key), [disc, setDisc] = useState(firstDisc), discReqs = requirements.filter((r2) => r2.discipline === disc), [reqId, setReqId] = useState(presetReq ? presetReq.id : (discReqs[0] || {}).id || ""), r = requirements.find((x) => x.id === reqId), last = r ? r.stages.length - 1 : 0, openCases = r ? cases.filter((c) => c.reqId === r.id && c.stage < last) : [], [caseId, setCaseId] = useState("new"), existing = openCases.find((c) => c.id === caseId), [patientId, setPatientId] = useState(""), [customId, setCustomId] = useState(""), [stage, setStage] = useState(r ? last : 0), [date, setDate] = useState(TODAY_ISO), [err, setErr] = useState(""), pickReq = (id) => {
+    const nr = requirements.find((x) => x.id === id);
+    setReqId(id), setCaseId("new"), setStage(nr ? nr.stages.length - 1 : 0), setErr("");
+  }, pickDisc = (d) => {
+    setDisc(d);
+    const first = requirements.find((x) => x.discipline === d);
+    pickReq(first ? first.id : "");
+  }, pickCase = (id) => {
+    setCaseId(id), setErr("");
+    const c = openCases.find((x) => x.id === id);
+    setStage(c ? Math.min(last, c.stage + 1) : last);
+  }, code = discInfo(disc).code, sorted = useMemo(() => [...patients].sort((a, b) => (b.id.startsWith(code + "-") ? 1 : 0) - (a.id.startsWith(code + "-") ? 1 : 0)), [patients, code]);
+  return /* @__PURE__ */ React.createElement(Modal, { title: "Log requirement", onClose, footer: /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("button", { className: btnGhost, onClick: onClose }, "Cancel"), /* @__PURE__ */ React.createElement("button", { className: btnPrimary, onClick: () => {
+    if (!r) {
+      setErr("Choose a requirement to log against.");
+      return;
+    }
+    if (existing) {
+      if (stage <= existing.stage) {
+        setErr("Choose a stage after the one already recorded.");
+        return;
+      }
+      onSave({ type: "update", id: existing.id, stage, date, patientId: existing.patientId, req: r });
+      return;
+    }
+    const pid = patientId === "__other" ? customId.trim().toUpperCase() : patientId;
+    if (!pid) {
+      setErr("Link this case to a patient code.");
+      return;
+    }
+    onSave({ type: "new", case: { id: `C${Date.now()}`, reqId: r.id, patientId: pid, stage, started: date, updated: date }, req: r });
+  }, disabled: !r }, r && stage === last ? "Log completed case" : "Log progress")) }, /* @__PURE__ */ React.createElement(Field, { label: "Discipline" }, /* @__PURE__ */ React.createElement(DisciplineSelect, { id: "lc-disc", value: disc, onChange: pickDisc, clinicalOnly: !0 })), discReqs.length === 0 ? /* @__PURE__ */ React.createElement(Notice, { tone: "warn" }, "There are no requirements in this discipline yet. Add one on the Quotas page.") : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Field, { label: "Requirement" }, /* @__PURE__ */ React.createElement("select", { id: "lc-req", className: inputCls, value: reqId, onChange: (e) => pickReq(e.target.value) }, discReqs.map((x) => /* @__PURE__ */ React.createElement("option", { key: x.id, value: x.id }, x.name)))), openCases.length > 0 && /* @__PURE__ */ React.createElement("fieldset", null, /* @__PURE__ */ React.createElement("legend", { className: "mb-1.5 text-sm font-bold text-ink" }, "Case"), /* @__PURE__ */ React.createElement("div", { className: "space-y-1.5" }, openCases.map((c) => /* @__PURE__ */ React.createElement("label", { key: c.id, className: `flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2 text-sm ${caseId === c.id ? "border-accent bg-accentsoft" : "border-line hover:bg-surface2"}` }, /* @__PURE__ */ React.createElement("input", { type: "radio", name: "lc-case", checked: caseId === c.id, onChange: () => pickCase(c.id), className: "accent-[rgb(var(--accent))]" }), /* @__PURE__ */ React.createElement("span", { className: "text-ink" }, "Continue ", /* @__PURE__ */ React.createElement("b", null, c.patientId), ", last done: ", r.stages[c.stage], " (", fmtDate(c.updated), ")"))), /* @__PURE__ */ React.createElement("label", { className: `flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2 text-sm ${caseId === "new" ? "border-accent bg-accentsoft" : "border-line hover:bg-surface2"}` }, /* @__PURE__ */ React.createElement("input", { type: "radio", name: "lc-case", checked: caseId === "new", onChange: () => pickCase("new"), className: "accent-[rgb(var(--accent))]" }), /* @__PURE__ */ React.createElement("span", { className: "text-ink" }, "Start a new case")))), !existing && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Field, { label: "Patient", hint: `${discInfo(disc).short} patients are listed first.` }, /* @__PURE__ */ React.createElement("select", { id: "lc-pt", className: inputCls, value: patientId, onChange: (e) => {
+    setPatientId(e.target.value), setErr("");
+  } }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Choose a patient"), sorted.map((p) => /* @__PURE__ */ React.createElement("option", { key: p.id, value: p.id }, p.id, ", ", p.complaint.slice(0, 40), p.complaint.length > 40 ? "\u2026" : "")), /* @__PURE__ */ React.createElement("option", { value: "__other" }, "Another patient code"))), patientId === "__other" && /* @__PURE__ */ React.createElement(Field, { label: "Patient code" }, /* @__PURE__ */ React.createElement("input", { id: "lc-custom", className: inputCls, value: customId, onChange: (e) => setCustomId(e.target.value), placeholder: "e.g. OS-H15" }))), r && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { className: "mb-1.5 block text-sm font-bold text-ink" }, "Stage reached today"), r.stages.length > 1 ? /* @__PURE__ */ React.createElement(StagePicker, { stages: r.stages, value: stage, lockedThrough: existing ? existing.stage : null, onChange: (v) => {
+    setStage(v), setErr("");
+  } }) : /* @__PURE__ */ React.createElement("p", { className: "text-sm text-muted" }, "This requirement has one stage, so each case is logged as completed."), /* @__PURE__ */ React.createElement("p", { className: "mt-2 text-sm text-muted" }, stage === last ? /* @__PURE__ */ React.createElement(React.Fragment, null, "Saving completes this case and adds 1 to ", /* @__PURE__ */ React.createElement("b", { className: "text-ink" }, "Completed"), ".") : /* @__PURE__ */ React.createElement(React.Fragment, null, "Saved as in progress, ", stage + 1, " of ", r.stages.length, " stages done. Next: ", r.stages[stage + 1], "."))), /* @__PURE__ */ React.createElement(Field, { label: "Date" }, /* @__PURE__ */ React.createElement("input", { id: "lc-date", type: "date", className: inputCls, value: date, onChange: (e) => setDate(e.target.value) }))), err && /* @__PURE__ */ React.createElement(Notice, { tone: "danger" }, err));
+}
+function RequirementForm({ initial, presetDiscipline, caseCount, onSave, onDelete, onClose }) {
+  const [disc, setDisc] = useState(initial ? initial.discipline : presetDiscipline || CLINICAL[0].key), [name, setName] = useState(initial ? initial.name : ""), [target, setTarget] = useState(initial ? initial.target : 1), [stages, setStages] = useState(initial ? [...initial.stages] : ["Completed"]), [err, setErr] = useState(""), [confirmDelete, setConfirmDelete] = useState(!1), setStageAt = (i, v) => setStages(stages.map((s, j) => j === i ? v : s)), save = () => {
+    const clean = stages.map((s) => s.trim()).filter(Boolean);
+    if (!name.trim()) {
+      setErr("Name the requirement to save it.");
+      return;
+    }
+    if (!clean.length) {
+      setErr("Add at least one stage.");
+      return;
+    }
+    onSave({ discipline: disc, name: name.trim(), target: Math.max(1, Number(target) || 1), stages: clean });
+  };
+  return /* @__PURE__ */ React.createElement(
+    Modal,
+    {
+      title: initial ? "Edit requirement" : "Add requirement",
+      onClose,
+      footer: /* @__PURE__ */ React.createElement(React.Fragment, null, initial && !confirmDelete && /* @__PURE__ */ React.createElement("button", { className: `${btnGhost} mr-auto text-danger`, onClick: () => setConfirmDelete(!0) }, /* @__PURE__ */ React.createElement(Icon, { name: "Trash2", size: 16 }), "Delete"), /* @__PURE__ */ React.createElement("button", { className: btnGhost, onClick: onClose }, "Cancel"), /* @__PURE__ */ React.createElement("button", { className: btnPrimary, onClick: save }, initial ? "Save changes" : "Add requirement"))
+    },
+    confirmDelete && /* @__PURE__ */ React.createElement("div", { className: "rounded-xl border border-danger/40 bg-dangersoft p-3" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-danger" }, "Delete this requirement", caseCount ? ` and its ${plural(caseCount, "logged case")}` : "", "? This can't be undone."), /* @__PURE__ */ React.createElement("div", { className: "mt-2 flex gap-2" }, /* @__PURE__ */ React.createElement("button", { className: btnGhost, onClick: () => setConfirmDelete(!1) }, "Keep it"), /* @__PURE__ */ React.createElement("button", { className: btnDanger, onClick: onDelete }, "Delete requirement"))),
+    /* @__PURE__ */ React.createElement(Field, { label: "Discipline" }, /* @__PURE__ */ React.createElement(DisciplineSelect, { id: "rf-disc", value: disc, onChange: setDisc, clinicalOnly: !0 })),
+    /* @__PURE__ */ React.createElement(Field, { label: "Requirement" }, /* @__PURE__ */ React.createElement("input", { id: "rf-name", className: inputCls, value: name, onChange: (e) => setName(e.target.value), placeholder: "e.g. Onlays (indirect)" })),
+    /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { className: "mb-1 block text-sm font-bold text-ink" }, "Target cases"), /* @__PURE__ */ React.createElement(NumberStepper, { id: "rf-target", label: "Target", value: Number(target) || 1, floor: 1, onChange: setTarget })),
+    /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { className: "mb-1 block text-sm font-bold text-ink" }, "Stages"), /* @__PURE__ */ React.createElement("p", { className: "mb-2 text-xs text-muted" }, "In clinical order. A case counts as completed when its last stage is logged. Use one stage for single-visit procedures."), /* @__PURE__ */ React.createElement("ol", { className: "space-y-1.5" }, stages.map((s, i) => /* @__PURE__ */ React.createElement("li", { key: i, className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { className: "w-5 shrink-0 text-right text-sm font-bold tabular-nums text-muted" }, i + 1), /* @__PURE__ */ React.createElement("input", { id: `rf-stage-${i}`, className: inputCls, value: s, onChange: (e) => setStageAt(i, e.target.value), "aria-label": `Stage ${i + 1}` }), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        onClick: () => setStages(stages.filter((_, j) => j !== i)),
+        disabled: stages.length === 1,
+        className: "rounded-lg p-2 text-muted hover:bg-surface2 hover:text-danger disabled:opacity-30",
+        "aria-label": `Remove stage ${i + 1}`
+      },
+      /* @__PURE__ */ React.createElement(Icon, { name: "X", size: 16 })
+    )))), /* @__PURE__ */ React.createElement("button", { type: "button", className: `${linkBtn} mt-2 text-sm`, onClick: () => setStages([...stages, ""]) }, "Add stage"), initial && caseCount > 0 && /* @__PURE__ */ React.createElement("p", { className: "mt-2 text-xs text-muted" }, "Logged cases keep their stage number. If you remove stages, cases past the new last stage become completed.")),
+    err && /* @__PURE__ */ React.createElement(Notice, { tone: "danger" }, err)
+  );
+}
+function JournalForm({ patients, onSave, onClose }) {
+  const [f, setF] = useState({ date: TODAY_ISO, discipline: "Endodontics", patientId: "", description: "", feedback: "", takeaways: "", actionPlan: "", tags: [] }), [err, setErr] = useState(""), set = (k) => (e) => setF({ ...f, [k]: e.target.value }), toggleTag = (t) => setF({ ...f, tags: f.tags.includes(t) ? f.tags.filter((x) => x !== t) : [...f.tags, t] });
+  return /* @__PURE__ */ React.createElement(Modal, { title: "New journal entry", onClose, footer: /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("button", { className: btnGhost, onClick: onClose }, "Cancel"), /* @__PURE__ */ React.createElement("button", { className: btnPrimary, onClick: () => {
+    if (!f.description.trim()) {
+      setErr("Describe what happened in clinic to save this entry.");
+      return;
+    }
+    onSave({ ...f, id: `J${Date.now()}` });
+  } }, "Save entry")) }, /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3" }, /* @__PURE__ */ React.createElement(Field, { label: "Date" }, /* @__PURE__ */ React.createElement("input", { id: "jf-date", type: "date", className: inputCls, value: f.date, onChange: set("date") })), /* @__PURE__ */ React.createElement(Field, { label: "Discipline" }, /* @__PURE__ */ React.createElement(DisciplineSelect, { id: "jf-disc", value: f.discipline, onChange: (v) => setF({ ...f, discipline: v }) }))), /* @__PURE__ */ React.createElement(Field, { label: "Patient" }, /* @__PURE__ */ React.createElement("select", { id: "jf-pt", className: inputCls, value: f.patientId, onChange: set("patientId") }, /* @__PURE__ */ React.createElement("option", { value: "" }, "No specific patient"), patients.map((p) => /* @__PURE__ */ React.createElement("option", { key: p.id, value: p.id }, p.id)))), /* @__PURE__ */ React.createElement(Field, { label: "What happened" }, /* @__PURE__ */ React.createElement("textarea", { id: "jf-desc", rows: "3", className: inputCls, value: f.description, onChange: set("description"), placeholder: "Procedure, what went well, what didn't" })), /* @__PURE__ */ React.createElement(Field, { label: "Faculty feedback" }, /* @__PURE__ */ React.createElement("textarea", { id: "jf-fb", rows: "2", className: inputCls, value: f.feedback, onChange: set("feedback"), placeholder: "Who said what, including viva questions" })), /* @__PURE__ */ React.createElement(Field, { label: "Complications and takeaways" }, /* @__PURE__ */ React.createElement("textarea", { id: "jf-tk", rows: "2", className: inputCls, value: f.takeaways, onChange: set("takeaways") })), /* @__PURE__ */ React.createElement(Field, { label: "Action plan" }, /* @__PURE__ */ React.createElement("textarea", { id: "jf-ap", rows: "2", className: inputCls, value: f.actionPlan, onChange: set("actionPlan"), placeholder: "What you'll do differently next time" })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { className: "mb-1.5 block text-sm font-bold text-ink" }, "Tags"), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-2" }, TAGS.map((t) => /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      key: t,
+      type: "button",
+      onClick: () => toggleTag(t),
+      "aria-pressed": f.tags.includes(t),
+      className: `rounded-full border px-3 py-1 text-sm font-bold transition ${f.tags.includes(t) ? "border-accent bg-accentsoft text-accentink" : "border-line text-muted hover:bg-surface2"}`
+    },
+    t
+  )))), err && /* @__PURE__ */ React.createElement(Notice, { tone: "danger" }, err));
+}
+function PatientEditForm({ patient, onSave, onArchive, onRemove, onClose }) {
+  const [f, setF] = useState({ ...patient, age: String(patient.age) }), [err, setErr] = useState(""), [confirmRemove, setConfirmRemove] = useState(!1), set = (k) => (e) => setF({ ...f, [k]: e.target.value }), save = () => {
+    if (!f.age || !f.complaint.trim()) {
+      setErr("Add the age and chief complaint to save changes.");
+      return;
+    }
+    onSave(cleanPatient(f));
+  };
+  return /* @__PURE__ */ React.createElement(Modal, { title: `Edit ${patient.id}`, onClose, footer: /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("button", { className: btnGhost, onClick: onClose }, "Cancel"), /* @__PURE__ */ React.createElement("button", { className: btnPrimary, onClick: save }, "Save changes")) }, patient.archived && /* @__PURE__ */ React.createElement(Notice, null, "This patient is archived. They're hidden from your list, alerts and clinic schedule until you restore them."), /* @__PURE__ */ React.createElement(IdentityFields, { idPrefix: "pe", f, setF }), /* @__PURE__ */ React.createElement(Field, { label: "Discipline", hint: "The patient code stays the same." }, /* @__PURE__ */ React.createElement(DisciplineSelect, { id: "pe-disc", value: f.discipline, onChange: (v) => setF({ ...f, discipline: v }) })), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3" }, /* @__PURE__ */ React.createElement(Field, { label: "Age" }, /* @__PURE__ */ React.createElement("input", { id: "pe-age", type: "number", min: "1", max: "110", className: inputCls, value: f.age, onChange: set("age") })), /* @__PURE__ */ React.createElement(Field, { label: "Gender" }, /* @__PURE__ */ React.createElement("select", { id: "pe-gender", className: inputCls, value: f.gender, onChange: set("gender") }, /* @__PURE__ */ React.createElement("option", { value: "F" }, "Female"), /* @__PURE__ */ React.createElement("option", { value: "M" }, "Male")))), /* @__PURE__ */ React.createElement(Field, { label: "Chief complaint" }, /* @__PURE__ */ React.createElement("textarea", { id: "pe-cc", rows: "2", className: inputCls, value: f.complaint, onChange: set("complaint") })), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3" }, /* @__PURE__ */ React.createElement(Field, { label: "Reliability" }, /* @__PURE__ */ React.createElement("select", { id: "pe-rel", className: inputCls, value: f.reliability, onChange: set("reliability") }, RELIABILITY.map((r) => /* @__PURE__ */ React.createElement("option", { key: r }, r)))), /* @__PURE__ */ React.createElement("div", { className: "flex items-end pb-1.5" }, /* @__PURE__ */ React.createElement(NumberStepper, { id: "pe-visits", label: "Visits so far", value: Number(f.visits) || 0, onChange: (v) => setF({ ...f, visits: v }) }))), /* @__PURE__ */ React.createElement(StageFields, { idPrefix: "pe", f, setF }), /* @__PURE__ */ React.createElement(Field, { label: "Next appointment" }, /* @__PURE__ */ React.createElement("input", { id: "pe-next", type: "date", className: inputCls, value: f.nextAppt || "", onChange: set("nextAppt") })), err && /* @__PURE__ */ React.createElement(Notice, { tone: "danger" }, err), /* @__PURE__ */ React.createElement("section", { className: "space-y-2 border-t border-line pt-4" }, /* @__PURE__ */ React.createElement("h3", { className: "font-bold text-ink" }, patient.archived ? "Restore patient" : "Archive patient"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-muted" }, patient.archived ? "Brings this patient back into your list, alerts and clinic schedule." : "For finished or discharged patients. Hides them from your list, alerts and clinic schedule but keeps their record so you can restore them later."), /* @__PURE__ */ React.createElement("button", { className: btnGhost, onClick: () => onArchive(!patient.archived) }, /* @__PURE__ */ React.createElement(Icon, { name: patient.archived ? "ArchiveRestore" : "Archive", size: 16 }), patient.archived ? "Restore to list" : "Archive patient")), /* @__PURE__ */ React.createElement("section", { className: "space-y-2 border-t border-line pt-4" }, /* @__PURE__ */ React.createElement("h3", { className: "font-bold text-ink" }, "Remove patient"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-muted" }, "Deletes this patient from the app. Logged cases, lab work and journal entries keep the patient code, so your quota counts don't change."), confirmRemove ? /* @__PURE__ */ React.createElement("div", { className: "rounded-xl border border-danger/40 bg-dangersoft p-3" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-danger" }, "Remove ", patient.id, " from the app? You can undo this for a few seconds afterwards."), /* @__PURE__ */ React.createElement("div", { className: "mt-2 flex flex-wrap gap-2" }, /* @__PURE__ */ React.createElement("button", { className: btnGhost, onClick: () => setConfirmRemove(!1) }, "Keep patient"), /* @__PURE__ */ React.createElement("button", { className: btnDanger, onClick: onRemove }, "Remove ", patient.id))) : /* @__PURE__ */ React.createElement("button", { className: `${btnGhost} text-danger`, onClick: () => setConfirmRemove(!0) }, /* @__PURE__ */ React.createElement(Icon, { name: "Trash2", size: 16 }), "Remove patient")));
+}
+function TopicForm({ onSave, onClose, presetDiscipline }) {
+  const [f, setF] = useState({ discipline: presetDiscipline && presetDiscipline !== "All" ? presetDiscipline : DISCIPLINES[0].key, name: "", stars: 3, mastery: "Learning" }), [err, setErr] = useState("");
+  return /* @__PURE__ */ React.createElement(Modal, { title: "Add study topic", onClose, footer: /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("button", { className: btnGhost, onClick: onClose }, "Cancel"), /* @__PURE__ */ React.createElement("button", { className: btnPrimary, onClick: () => {
+    if (!f.name.trim()) {
+      setErr("Name the topic to add it.");
+      return;
+    }
+    onSave({ ...f, name: f.name.trim(), id: `T${Date.now()}`, interval: 1, lastReviewed: TODAY_ISO, nextDue: addDays(1) });
+  } }, "Add topic")) }, /* @__PURE__ */ React.createElement(Field, { label: "Discipline" }, /* @__PURE__ */ React.createElement(DisciplineSelect, { id: "tf-disc", value: f.discipline, onChange: (v) => setF({ ...f, discipline: v }) })), /* @__PURE__ */ React.createElement(Field, { label: "Topic" }, /* @__PURE__ */ React.createElement("input", { id: "tf-name", className: inputCls, value: f.name, onChange: (e) => setF({ ...f, name: e.target.value }), placeholder: "e.g. Ludwig's angina: spread and airway management" })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { className: "mb-1 block text-sm font-bold text-ink" }, "High-yield rating"), /* @__PURE__ */ React.createElement(Stars, { value: f.stars, onChange: (v) => setF({ ...f, stars: v }), size: 22 })), /* @__PURE__ */ React.createElement(Field, { label: "Mastery" }, /* @__PURE__ */ React.createElement("select", { id: "tf-mastery", className: inputCls, value: f.mastery, onChange: (e) => setF({ ...f, mastery: e.target.value }) }, MASTERY.map((m) => /* @__PURE__ */ React.createElement("option", { key: m }, m)))), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-muted" }, "First review is scheduled for tomorrow."), err && /* @__PURE__ */ React.createElement(Notice, { tone: "danger" }, err));
+}
+function DataPanel({ data, store, downloads, onImport, onReset, onClose }) {
+  const [msg, setMsg] = useState(null), [backupText, setBackupText] = useState(""), [pasteOpen, setPasteOpen] = useState(!1), [pasteText, setPasteText] = useState(""), [pending, setPending] = useState(null), [confirmReset, setConfirmReset] = useState(!1), textRef = useRef(null), fileRef = useRef(null), buildBackup = () => JSON.stringify({ app: "chairside", version: 2, exportedAt: (/* @__PURE__ */ new Date()).toISOString(), data }, null, 2), showText = (why) => {
+    setBackupText(buildBackup()), setMsg({ tone: "warn", text: why });
+  }, exportBackup = async () => {
+    if (setMsg(null), !downloads) {
+      showText("File saving isn\u2019t available in this view. Copy the backup text below and keep it in a .json file.");
+      return;
+    }
+    try {
+      await downloads.save({ filename: `chairside-backup-${TODAY_ISO}.json`, data: buildBackup() }), setMsg({ tone: "ok", text: "Backup saved." });
+    } catch (e) {
+      const code = e && e.code;
+      code === "declined" ? setMsg({ tone: "neutral", text: "Export cancelled. Nothing was saved." }) : code === "rate_limited" ? setMsg({ tone: "warn", text: "A save prompt is already open. Finish it, then export again." }) : showText("File saving isn\u2019t available in this view. Copy the backup text below and keep it in a .json file.");
+    }
+  }, copyBackup = async () => {
+    try {
+      await navigator.clipboard.writeText(backupText), setMsg({ tone: "ok", text: "Backup copied. Paste it into a text file and save it as .json." });
+    } catch {
+      textRef.current && (textRef.current.focus(), textRef.current.select()), setMsg({ tone: "warn", text: "Copying isn\u2019t allowed here. The text is selected; copy it with your keyboard." });
+    }
+  }, checkBackup = (text) => {
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      setPending(null), setMsg({ tone: "danger", text: "This isn\u2019t valid JSON. Choose a backup file exported from Chairside." });
+      return;
+    }
+    const clean = sanitizeData(parsed);
+    if (!clean) {
+      setPending(null), setMsg({ tone: "danger", text: "This file isn\u2019t a Chairside backup. It needs patients, labs, requirements, cases, topics and journal lists." });
+      return;
+    }
+    setPending(clean), setMsg(null);
+  }, onFile = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => checkBackup(String(reader.result || "")), reader.onerror = () => setMsg({ tone: "danger", text: "The file couldn\u2019t be read. Try choosing it again." }), reader.readAsText(file), e.target.value = "";
+  }, status = store.mode === "saved" ? { tone: "ok", icon: "CheckCircle2", text: `Your changes save automatically in this browser${store.at ? `, last at ${store.at.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : ""}.` } : store.mode === "sample" ? { tone: "neutral", icon: "Database", text: "You\u2019re looking at sample data. Your first change starts saving in this browser." } : { tone: "warn", icon: "AlertTriangle", text: "This browser isn\u2019t keeping data for this page. Export a backup before you close it." };
+  return /* @__PURE__ */ React.createElement(Modal, { title: "Your data", onClose }, /* @__PURE__ */ React.createElement("div", { className: `flex items-start gap-2 rounded-lg px-3 py-2.5 text-sm ${status.tone === "ok" ? "bg-oksoft text-ok" : status.tone === "warn" ? "bg-warnsoft text-warn" : "bg-surface2 text-ink"}` }, /* @__PURE__ */ React.createElement(Icon, { name: status.icon, size: 16, className: "mt-0.5 shrink-0" }), /* @__PURE__ */ React.createElement("span", { className: "font-bold" }, status.text)), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-muted" }, "Data stays in this browser on this device. Export a backup to move it to another device or keep a copy."), msg && /* @__PURE__ */ React.createElement(Notice, { tone: msg.tone }, msg.text), /* @__PURE__ */ React.createElement("section", { className: "space-y-2 border-t border-line pt-4" }, /* @__PURE__ */ React.createElement("h3", { className: "font-bold text-ink" }, "Export backup"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-muted" }, "Saves ", summarize(data), " as a .json file. It includes any patient names and registration numbers you've entered, so store it somewhere private."), /* @__PURE__ */ React.createElement("button", { className: btnPrimary, onClick: exportBackup }, /* @__PURE__ */ React.createElement(Icon, { name: "Download", size: 16 }), "Export backup"), backupText && /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, /* @__PURE__ */ React.createElement("textarea", { id: "dp-backup", ref: textRef, readOnly: !0, rows: "6", value: backupText, className: `${inputCls} font-mono text-xs`, "aria-label": "Backup text", onFocus: (e) => e.target.select() }), /* @__PURE__ */ React.createElement("button", { className: btnGhost, onClick: copyBackup }, /* @__PURE__ */ React.createElement(Icon, { name: "Copy", size: 16 }), "Copy backup text"))), /* @__PURE__ */ React.createElement("section", { className: "space-y-2 border-t border-line pt-4" }, /* @__PURE__ */ React.createElement("h3", { className: "font-bold text-ink" }, "Import backup"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-muted" }, "Replaces everything in the app with the backup's contents."), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-2" }, /* @__PURE__ */ React.createElement("input", { ref: fileRef, id: "dp-file", type: "file", accept: ".json,application/json", onChange: onFile, className: "sr-only" }), /* @__PURE__ */ React.createElement("button", { className: btnGhost, onClick: () => fileRef.current && fileRef.current.click() }, /* @__PURE__ */ React.createElement(Icon, { name: "Upload", size: 16 }), "Choose backup file"), /* @__PURE__ */ React.createElement("button", { className: btnGhost, onClick: () => setPasteOpen(!pasteOpen), "aria-expanded": pasteOpen }, "Paste backup text")), pasteOpen && /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, /* @__PURE__ */ React.createElement("textarea", { id: "dp-paste", rows: "5", value: pasteText, onChange: (e) => setPasteText(e.target.value), className: `${inputCls} font-mono text-xs`, placeholder: '{"app": "chairside", ...}', "aria-label": "Paste backup text" }), /* @__PURE__ */ React.createElement("button", { className: btnGhost, disabled: !pasteText.trim(), onClick: () => checkBackup(pasteText) }, "Check backup")), pending && /* @__PURE__ */ React.createElement("div", { className: "rounded-xl border border-accent/50 bg-accentsoft p-3" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm text-ink" }, "This backup has ", summarize(pending), ". Importing replaces your current data."), /* @__PURE__ */ React.createElement("div", { className: "mt-2 flex flex-wrap gap-2" }, /* @__PURE__ */ React.createElement("button", { className: btnGhost, onClick: () => setPending(null) }, "Cancel"), /* @__PURE__ */ React.createElement("button", { className: btnPrimary, onClick: () => {
+    onImport(pending), setPending(null), setPasteText(""), setPasteOpen(!1);
+  } }, "Replace with backup")))), /* @__PURE__ */ React.createElement("section", { className: "space-y-2 border-t border-line pt-4" }, /* @__PURE__ */ React.createElement("h3", { className: "font-bold text-ink" }, "Reset to sample data"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-muted" }, "Clears what this browser has saved and reloads the sample patients, quotas, topics, journal and exam tips with dates set from today."), confirmReset ? /* @__PURE__ */ React.createElement("div", { className: "rounded-xl border border-danger/40 bg-dangersoft p-3" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-danger" }, "This deletes your entries in this browser. Export a backup first if you want to keep them."), /* @__PURE__ */ React.createElement("div", { className: "mt-2 flex flex-wrap gap-2" }, /* @__PURE__ */ React.createElement("button", { className: btnGhost, onClick: () => setConfirmReset(!1) }, "Cancel"), /* @__PURE__ */ React.createElement("button", { className: btnDanger, onClick: () => {
+    onReset(), setConfirmReset(!1);
+  } }, "Reset everything"))) : /* @__PURE__ */ React.createElement("button", { className: `${btnGhost} text-danger`, onClick: () => setConfirmReset(!0) }, /* @__PURE__ */ React.createElement(Icon, { name: "RotateCcw", size: 16 }), "Reset to sample data")));
+}
+function Dashboard({ stats, patients, journal, go, open, showNames }) {
+  const hour = (/* @__PURE__ */ new Date()).getHours(), greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening", todayLong = TODAY.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" }), upcoming = patients.filter((p) => p.nextAppt && daysFrom(p.nextAppt) >= 0 && daysFrom(p.nextAppt) <= 3).sort((a, b) => a.nextAppt.localeCompare(b.nextAppt)), todayCount = upcoming.filter((p) => daysFrom(p.nextAppt) === 0).length, metrics = [
+    { label: "Active patients", value: stats.activePatients, sub: `${stats.maintenance} completed or on review`, icon: "Users", tab: "patients" },
+    { label: "Lab work pending", value: stats.labPending, sub: stats.labOverdue ? `${stats.labOverdue} overdue` : "None overdue", icon: "FlaskConical", tab: "patients", tone: stats.labOverdue ? "danger" : null },
+    { label: "Overall quota", value: `${stats.quotaPct}%`, sub: `${stats.quotaDone} of ${stats.quotaTarget} cases`, icon: "ClipboardCheck", tab: "quota", bar: stats.quotaPct },
+    { label: "Topics due today", value: stats.dueToday, sub: stats.overdueTopics ? `${stats.overdueTopics} carried over` : "None carried over", icon: "BookOpen", tab: "study", tone: stats.overdueTopics ? "warn" : null }
+  ];
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "mb-6" }, /* @__PURE__ */ React.createElement("p", { className: "text-[15px] text-muted" }, todayLong), /* @__PURE__ */ React.createElement("h1", { className: "mt-0.5 text-[28px] sm:text-4xl font-bold leading-tight tracking-tight text-ink" }, greet, "."), /* @__PURE__ */ React.createElement("p", { className: "mt-2 max-w-[60ch] text-[15px] text-ink/80" }, stats.alerts.length === 0 ? "Nothing needs your attention right now." : `${plural(stats.alerts.length, "item")} need${stats.alerts.length === 1 ? "s" : ""} attention.`, " ", todayCount === 0 ? "No patients are booked today." : `${plural(todayCount, "patient")} ${todayCount === 1 ? "is" : "are"} booked today.`)), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3 lg:grid-cols-4" }, metrics.map((m) => /* @__PURE__ */ React.createElement("button", { key: m.label, onClick: () => go(m.tab), className: "group rounded-2xl border border-line bg-surface p-4 text-left transition hover:border-accent/60" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between gap-2 text-muted" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm font-bold" }, m.label), /* @__PURE__ */ React.createElement(Icon, { name: m.icon, size: 17, className: "shrink-0 group-hover:text-accent" })), /* @__PURE__ */ React.createElement("div", { className: "mt-2 text-3xl font-bold tabular-nums text-ink" }, m.value), m.bar != null && /* @__PURE__ */ React.createElement("div", { className: "mt-2 h-1.5 rounded-full bg-surface2" }, /* @__PURE__ */ React.createElement("div", { className: "h-full rounded-full bg-accent", style: { width: `${m.bar}%` } })), /* @__PURE__ */ React.createElement("div", { className: `mt-1.5 text-sm ${m.tone === "danger" ? "text-danger font-bold" : m.tone === "warn" ? "text-warn font-bold" : "text-muted"}` }, m.sub)))), /* @__PURE__ */ React.createElement("div", { className: "mt-5 flex flex-wrap gap-2" }, /* @__PURE__ */ React.createElement("button", { className: btnPrimary, onClick: () => open("journal") }, /* @__PURE__ */ React.createElement(Icon, { name: "NotebookPen", size: 16 }), "New journal entry"), /* @__PURE__ */ React.createElement("button", { className: btnGhost, onClick: () => open("patient") }, /* @__PURE__ */ React.createElement(Icon, { name: "UserPlus", size: 16 }), "Add patient"), /* @__PURE__ */ React.createElement("button", { className: btnGhost, onClick: () => open("log") }, /* @__PURE__ */ React.createElement(Icon, { name: "ClipboardCheck", size: 16 }), "Log requirement"), /* @__PURE__ */ React.createElement("button", { className: btnGhost, onClick: () => open("tip") }, /* @__PURE__ */ React.createElement(Icon, { name: "Lightbulb", size: 16 }), "Add exam tip")), /* @__PURE__ */ React.createElement("div", { className: "mt-6 grid gap-5 lg:grid-cols-5" }, /* @__PURE__ */ React.createElement(Section, { title: "Clinical alerts", className: "lg:col-span-3" }, stats.alerts.length === 0 ? /* @__PURE__ */ React.createElement(Empty, { icon: "CheckCircle2", title: "All clear" }, "No overdue lab work or urgent quota gaps.") : /* @__PURE__ */ React.createElement("ul", { className: "divide-y divide-line" }, stats.alerts.map((a, i) => /* @__PURE__ */ React.createElement("li", { key: i }, /* @__PURE__ */ React.createElement("button", { onClick: () => go(a.tab), className: "flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-surface2 sm:px-5" }, /* @__PURE__ */ React.createElement("span", { className: `mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${a.tone === "danger" ? "bg-dangersoft text-danger" : "bg-warnsoft text-warn"}` }, /* @__PURE__ */ React.createElement(Icon, { name: a.icon, size: 16 })), /* @__PURE__ */ React.createElement("span", { className: "min-w-0 flex-1" }, /* @__PURE__ */ React.createElement("span", { className: "block font-bold text-ink" }, a.title), /* @__PURE__ */ React.createElement("span", { className: "block text-sm text-muted" }, a.detail)), /* @__PURE__ */ React.createElement(Icon, { name: "ChevronRight", size: 16, className: "mt-2 shrink-0 text-muted" })))))), /* @__PURE__ */ React.createElement(Section, { title: "Next 3 days in clinic", className: "lg:col-span-2", action: /* @__PURE__ */ React.createElement("button", { className: `${linkBtn} text-sm`, onClick: () => go("patients") }, "All patients") }, upcoming.length === 0 ? /* @__PURE__ */ React.createElement(Empty, { icon: "Calendar", title: "No patients booked" }, "Set next visits in the patient tracker.") : /* @__PURE__ */ React.createElement("ul", { className: "divide-y divide-line" }, upcoming.map((p) => /* @__PURE__ */ React.createElement("li", { key: p.id, className: "flex items-center gap-3 px-4 py-2.5 sm:px-5" }, /* @__PURE__ */ React.createElement("div", { className: "w-16 shrink-0 text-sm" }, /* @__PURE__ */ React.createElement("div", { className: `font-bold ${daysFrom(p.nextAppt) === 0 ? "text-accent" : "text-ink"}` }, daysFrom(p.nextAppt) === 0 ? "Today" : daysFrom(p.nextAppt) === 1 ? "Tmrw" : parseISO(p.nextAppt).toLocaleDateString("en-GB", { weekday: "short" })), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-muted" }, fmtDate(p.nextAppt))), /* @__PURE__ */ React.createElement("div", { className: "min-w-0 flex-1" }, /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { className: "font-bold text-ink" }, p.id), showNames && p.name && /* @__PURE__ */ React.createElement("span", { className: "text-ink" }, p.name), /* @__PURE__ */ React.createElement(Pill, { tone: stageTone[p.stage] }, stageLabel(p))), /* @__PURE__ */ React.createElement("div", { className: "truncate text-sm text-muted" }, p.complaint))))))), journal[0] && /* @__PURE__ */ React.createElement(Section, { title: "Latest action plan", className: "mt-5", action: /* @__PURE__ */ React.createElement("button", { className: `${linkBtn} text-sm`, onClick: () => go("journal") }, "Open journal") }, /* @__PURE__ */ React.createElement("div", { className: "px-4 py-4 sm:px-5" }, /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap items-center gap-2 text-sm text-muted" }, /* @__PURE__ */ React.createElement(DiscChip, { name: journal[0].discipline }), journal[0].patientId && /* @__PURE__ */ React.createElement("span", { className: "font-bold text-ink" }, journal[0].patientId), /* @__PURE__ */ React.createElement("span", null, fmtDate(journal[0].date))), /* @__PURE__ */ React.createElement("p", { className: "mt-2 max-w-[75ch] text-ink" }, journal[0].actionPlan || journal[0].description))));
+}
+function PatientsView({ patients, setPatients, labs, setLabs, open, toast, showNames, setShowNames }) {
+  const [showArchived, setShowArchived] = useState(!1), [q, setQ] = useState(""), [disc, setDisc] = useState("All"), [stage, setStage] = useState("All"), [showClosed, setShowClosed] = useState(!1), rows = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    return patients.filter((p) => (showArchived || !p.archived) && (disc === "All" || p.discipline === disc) && (stage === "All" || p.stage === stage) && (!s || [p.id, p.name, p.regNo, p.complaint, p.discipline, stageLabel(p)].join(" ").toLowerCase().includes(s)));
+  }, [patients, q, disc, stage, showArchived]), archivedCount = patients.filter((p) => p.archived).length, labRows = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    return labs.filter((l) => showClosed || !LAB_CLOSED.includes(l.status)).filter((l) => !s || [l.patientId, l.item, l.tech].join(" ").toLowerCase().includes(s)).sort((a, b) => a.due.localeCompare(b.due));
+  }, [labs, showClosed, q]), setField = (id, k, v) => setPatients((ps) => ps.map((p) => p.id === id ? { ...p, [k]: v } : p)), setLabStatus = (id, v) => {
+    setLabs((ls) => ls.map((l) => l.id === id ? { ...l, status: v } : l)), toast(`Lab case marked "${v}"`);
+  }, dueTone = (l) => {
+    if (LAB_CLOSED.includes(l.status)) return ["neutral", "Closed"];
+    const n = daysFrom(l.due);
+    return n < 0 ? ["danger", `Overdue ${-n}d`] : n <= 2 ? ["warn", n === 0 ? "Due today" : `Due ${relDay(l.due)}`] : ["neutral", `Due ${relDay(l.due)}`];
+  };
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(
+    PageHead,
+    {
+      title: "Patients and treatment",
+      sub: "Update stages and visits as you go so your alerts and clinic schedule stay accurate.",
+      action: /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-2" }, /* @__PURE__ */ React.createElement("button", { className: btnGhost, onClick: () => open("lab") }, /* @__PURE__ */ React.createElement(Icon, { name: "FlaskConical", size: 16 }), "Send lab case"), /* @__PURE__ */ React.createElement("button", { className: btnPrimary, onClick: () => open("patient") }, /* @__PURE__ */ React.createElement(Icon, { name: "UserPlus", size: 16 }), "Add patient"))
+    }
+  ), /* @__PURE__ */ React.createElement("div", { className: "mb-4 flex flex-wrap gap-2" }, /* @__PURE__ */ React.createElement(SearchBox, { id: "pt-search", value: q, onChange: setQ, placeholder: "Search names, reg. no., codes, complaints" }), /* @__PURE__ */ React.createElement("div", { className: "w-full sm:w-auto sm:min-w-[220px]" }, /* @__PURE__ */ React.createElement(DisciplineSelect, { id: "pt-disc", value: disc, onChange: setDisc, includeAll: "All disciplines" })), /* @__PURE__ */ React.createElement("select", { id: "pt-stage", className: `${inputCls} w-full sm:w-auto`, value: stage, onChange: (e) => setStage(e.target.value), "aria-label": "Filter by stage" }, /* @__PURE__ */ React.createElement("option", { value: "All" }, "All stages"), STAGES.map((s) => /* @__PURE__ */ React.createElement("option", { key: s }, s)))), /* @__PURE__ */ React.createElement(Section, { title: `Patients (${rows.length})`, action: /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap items-center gap-x-4 gap-y-1" }, /* @__PURE__ */ React.createElement("label", { className: "flex items-center gap-2 text-sm text-muted cursor-pointer" }, /* @__PURE__ */ React.createElement("input", { id: "pt-shownames", type: "checkbox", checked: showNames, onChange: (e) => setShowNames(e.target.checked), className: "accent-[rgb(var(--accent))] h-4 w-4" }), "Show names"), archivedCount > 0 && /* @__PURE__ */ React.createElement("label", { className: "flex items-center gap-2 text-sm text-muted cursor-pointer" }, /* @__PURE__ */ React.createElement("input", { id: "pt-showarchived", type: "checkbox", checked: showArchived, onChange: (e) => setShowArchived(e.target.checked), className: "accent-[rgb(var(--accent))] h-4 w-4" }), "Show archived (", archivedCount, ")")) }, rows.length === 0 ? /* @__PURE__ */ React.createElement(Empty, { icon: "Users", title: "No patients match" }, "Clear the search or filters to see everyone.") : /* @__PURE__ */ React.createElement("div", { className: "overflow-x-auto" }, /* @__PURE__ */ React.createElement("table", { className: "w-full min-w-[1120px] text-left text-sm" }, /* @__PURE__ */ React.createElement("thead", { className: "bg-surface2 text-muted" }, /* @__PURE__ */ React.createElement("tr", null, ["Patient", "Age / sex", "Discipline", "Chief complaint", "Visits", "Reliability", "Treatment stage", "Next visit"].map((h) => /* @__PURE__ */ React.createElement("th", { key: h, className: "px-4 py-2.5 font-bold" }, h)), /* @__PURE__ */ React.createElement("th", { className: "px-4 py-2.5" }, /* @__PURE__ */ React.createElement("span", { className: "sr-only" }, "Edit")))), /* @__PURE__ */ React.createElement("tbody", { className: "divide-y divide-line" }, rows.map((p) => /* @__PURE__ */ React.createElement("tr", { key: p.id, className: `align-top hover:bg-surface2/60 ${p.archived ? "opacity-60" : ""}` }, /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3 min-w-[170px]" }, /* @__PURE__ */ React.createElement("div", { className: "font-bold text-ink whitespace-nowrap" }, p.id), showNames && p.name && /* @__PURE__ */ React.createElement("div", { className: "text-ink" }, p.name), showNames && p.regNo && /* @__PURE__ */ React.createElement("div", { className: "text-xs text-muted tabular-nums" }, "Reg. no. ", p.regNo), !showNames && (p.name || p.regNo) && /* @__PURE__ */ React.createElement("div", { className: "text-xs text-muted" }, "Name hidden"), p.archived && /* @__PURE__ */ React.createElement("div", { className: "mt-1" }, /* @__PURE__ */ React.createElement(Pill, null, "Archived"))), /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3 text-ink whitespace-nowrap tabular-nums" }, p.age, " / ", p.gender), /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3" }, /* @__PURE__ */ React.createElement(DiscChip, { name: p.discipline, short: !0 })), /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3 text-ink max-w-[280px]" }, p.complaint), /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3 whitespace-nowrap" }, /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "min-w-[1.5rem] text-center font-bold tabular-nums text-ink" }, p.visits || 0), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => {
+        setField(p.id, "visits", (p.visits || 0) + 1), toast(`${p.id}: visit ${(p.visits || 0) + 1} recorded`);
+      },
+      className: "rounded-md border border-line bg-surface px-1.5 py-0.5 text-xs font-bold text-ink hover:border-accent hover:text-accent",
+      "aria-label": `Add a visit for ${p.id}`
+    },
+    "+1"
+  ))), /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3" }, /* @__PURE__ */ React.createElement(
+    "select",
+    {
+      value: p.reliability,
+      onChange: (e) => setField(p.id, "reliability", e.target.value),
+      "aria-label": `Reliability for ${p.id}`,
+      className: `rounded-md border-0 px-2 py-1 text-xs font-bold cursor-pointer ${{ High: "bg-oksoft text-ok", Med: "bg-warnsoft text-warn", Low: "bg-dangersoft text-danger" }[p.reliability]}`
+    },
+    RELIABILITY.map((r) => /* @__PURE__ */ React.createElement("option", { key: r }, r))
+  )), /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3" }, /* @__PURE__ */ React.createElement(
+    "select",
+    {
+      value: p.stage,
+      onChange: (e) => {
+        setField(p.id, "stage", e.target.value), toast(`${p.id} moved to ${e.target.value}`);
+      },
+      "aria-label": `Stage for ${p.id}`,
+      className: "rounded-md border border-line bg-surface px-2 py-1 text-sm text-ink cursor-pointer"
+    },
+    STAGES.map((s) => /* @__PURE__ */ React.createElement("option", { key: s }, s))
+  ), p.stage === "Treatment" && stepsFor(p.discipline) && (() => {
+    const steps = stepsFor(p.discipline), i = Math.min(p.txStep || 0, steps.length - 1);
+    return /* @__PURE__ */ React.createElement("div", { className: "mt-1.5 w-[230px]" }, /* @__PURE__ */ React.createElement(
+      "select",
+      {
+        value: i,
+        onChange: (e) => {
+          const v = Number(e.target.value);
+          setField(p.id, "txStep", v), toast(`${p.id}: ${steps[v]}`);
+        },
+        "aria-label": `Treatment step for ${p.id}`,
+        className: "w-full rounded-md border border-line bg-surface px-2 py-1 text-xs text-ink cursor-pointer"
+      },
+      steps.map((s, j) => /* @__PURE__ */ React.createElement("option", { key: s, value: j }, j + 1, ". ", s))
+    ), /* @__PURE__ */ React.createElement("div", { className: "mt-1 flex gap-0.5", "aria-hidden": "true" }, steps.map((s, j) => /* @__PURE__ */ React.createElement("span", { key: s, className: `h-1 flex-1 rounded-full ${j <= i ? "bg-accent" : "bg-surface2"}` }))), /* @__PURE__ */ React.createElement("div", { className: "mt-0.5 text-xs text-muted" }, "Step ", i + 1, " of ", steps.length));
+  })()), /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3 whitespace-nowrap" }, /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      type: "date",
+      value: p.nextAppt || "",
+      onChange: (e) => setField(p.id, "nextAppt", e.target.value),
+      "aria-label": `Next visit for ${p.id}`,
+      className: "rounded-md border border-line bg-surface px-2 py-1 text-sm text-ink"
+    }
+  )), /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3 text-right whitespace-nowrap" }, /* @__PURE__ */ React.createElement("button", { onClick: () => open("editPatient", p.id), className: "inline-flex items-center gap-1.5 rounded-md border border-line bg-surface px-2.5 py-1 text-xs font-bold text-ink hover:border-accent hover:text-accent", "aria-label": `Edit ${p.id}` }, /* @__PURE__ */ React.createElement(Icon, { name: "Pencil", size: 13 }), "Edit")))))))), /* @__PURE__ */ React.createElement(Section, { title: "Lab work pipeline", className: "mt-5", action: /* @__PURE__ */ React.createElement("label", { className: "flex items-center gap-2 text-sm text-muted cursor-pointer" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: showClosed, onChange: (e) => setShowClosed(e.target.checked), className: "accent-[rgb(var(--accent))] h-4 w-4" }), "Show closed cases") }, labRows.length === 0 ? /* @__PURE__ */ React.createElement(Empty, { icon: "FlaskConical", title: "No lab cases in progress" }, "Send a lab case when you take impressions.") : /* @__PURE__ */ React.createElement("div", { className: "overflow-x-auto" }, /* @__PURE__ */ React.createElement("table", { className: "w-full min-w-[880px] text-left text-sm" }, /* @__PURE__ */ React.createElement("thead", { className: "bg-surface2 text-muted" }, /* @__PURE__ */ React.createElement("tr", null, ["Patient", "Lab case", "Sent", "Target return", "Technician", "Try-in status"].map((h) => /* @__PURE__ */ React.createElement("th", { key: h, className: "px-4 py-2.5 font-bold" }, h)))), /* @__PURE__ */ React.createElement("tbody", { className: "divide-y divide-line" }, labRows.map((l) => {
+    const [tone, label] = dueTone(l);
+    return /* @__PURE__ */ React.createElement("tr", { key: l.id, className: "align-top hover:bg-surface2/60" }, /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3 font-bold text-ink whitespace-nowrap" }, l.patientId), /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3 text-ink" }, l.item), /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3 text-ink whitespace-nowrap" }, fmtDate(l.sent)), /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3 whitespace-nowrap" }, /* @__PURE__ */ React.createElement("div", { className: "text-ink" }, fmtDate(l.due)), /* @__PURE__ */ React.createElement("div", { className: "mt-1" }, /* @__PURE__ */ React.createElement(Pill, { tone }, label))), /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3" }, /* @__PURE__ */ React.createElement("div", { className: "text-ink" }, l.tech || "Not recorded"), l.contact && /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1 text-muted" }, /* @__PURE__ */ React.createElement(Icon, { name: "Phone", size: 13 }), l.contact)), /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3" }, /* @__PURE__ */ React.createElement(
+      "select",
+      {
+        value: l.status,
+        onChange: (e) => setLabStatus(l.id, e.target.value),
+        "aria-label": `Try-in status for ${l.item}`,
+        className: "rounded-md border border-line bg-surface px-2 py-1 text-sm text-ink cursor-pointer max-w-[210px]"
+      },
+      LAB_STATUSES.map((s) => /* @__PURE__ */ React.createElement("option", { key: s }, s))
+    )));
+  }))))));
+}
+function RequirementRow({ r, hue, cases, expanded, onToggle, updateReq, open, advanceCase, removeCase }) {
+  const [confirmId, setConfirmId] = useState(null), gap = r.target - r.done - r.ip, last = r.stages.length - 1, linked = cases.filter((c) => c.reqId === r.id).sort((a, b) => (a.stage >= last) - (b.stage >= last) || b.updated.localeCompare(a.updated)), status = r.done >= r.target ? /* @__PURE__ */ React.createElement("span", { className: "font-bold text-ok" }, "Requirement met") : gap > 0 ? /* @__PURE__ */ React.createElement("span", { className: r.pct < 50 ? "font-bold text-danger" : "font-bold text-warn" }, "Need ", plural(gap, "more patient")) : /* @__PURE__ */ React.createElement("span", { className: "text-muted" }, "Covered once in-progress cases finish");
+  return /* @__PURE__ */ React.createElement("li", { className: "px-4 py-3.5 sm:px-5" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-start justify-between gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: "text-[15px] font-bold text-ink" }, r.name), /* @__PURE__ */ React.createElement("div", { className: "mt-0.5 text-xs text-muted" }, r.stages.length > 1 ? r.stages.join(" \u2192 ") : "Single visit")), /* @__PURE__ */ React.createElement("div", { className: "flex shrink-0 items-center gap-1" }, /* @__PURE__ */ React.createElement("span", { className: "mr-1 text-sm tabular-nums text-ink" }, /* @__PURE__ */ React.createElement("b", null, r.done), /* @__PURE__ */ React.createElement("span", { className: "text-muted" }, " / ", r.target)), /* @__PURE__ */ React.createElement("button", { className: "rounded-lg p-1.5 text-muted hover:bg-surface2 hover:text-ink", onClick: () => open("req", r.id), "aria-label": `Edit ${r.name}` }, /* @__PURE__ */ React.createElement(Icon, { name: "Pencil", size: 15 })))), /* @__PURE__ */ React.createElement("div", { className: "mt-2" }, /* @__PURE__ */ React.createElement(
+    QuotaBar,
+    {
+      done: r.done,
+      ipFractions: r.ipFractions,
+      baseIP: r.baseIP,
+      target: r.target,
+      hue,
+      label: `${r.done} completed, ${r.ip} in progress, target ${r.target}`
+    }
+  )), /* @__PURE__ */ React.createElement("div", { className: "mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-2" }, /* @__PURE__ */ React.createElement(
+    NumberStepper,
+    {
+      id: `done-${r.id}`,
+      label: "Completed",
+      value: r.done,
+      floor: r.loggedDone,
+      floorHint: "Remove logged cases from the case list to go lower",
+      onChange: (v) => updateReq(r.id, { baseDone: Math.max(0, v - r.loggedDone) })
+    }
+  ), /* @__PURE__ */ React.createElement(
+    NumberStepper,
+    {
+      id: `ip-${r.id}`,
+      label: "In progress",
+      value: r.ip,
+      floor: r.loggedIP,
+      floorHint: "Remove logged cases from the case list to go lower",
+      onChange: (v) => updateReq(r.id, { baseIP: Math.max(0, v - r.loggedIP) })
+    }
+  ), /* @__PURE__ */ React.createElement(
+    NumberStepper,
+    {
+      id: `target-${r.id}`,
+      label: "Target",
+      value: r.target,
+      floor: 1,
+      onChange: (v) => updateReq(r.id, { target: Math.max(1, v) })
+    }
+  )), /* @__PURE__ */ React.createElement("div", { className: "mt-2 flex flex-wrap items-center justify-between gap-2 text-sm" }, /* @__PURE__ */ React.createElement("span", null, status, (r.baseDone > 0 || r.baseIP > 0) && /* @__PURE__ */ React.createElement("span", { className: "text-muted" }, " Includes ", [r.baseDone && `${r.baseDone} completed`, r.baseIP && `${r.baseIP} in progress`].filter(Boolean).join(" and "), " counted by hand.")), /* @__PURE__ */ React.createElement("span", { className: "flex gap-3" }, /* @__PURE__ */ React.createElement("button", { className: linkBtn, onClick: () => open("log", r.id) }, "Log case"), /* @__PURE__ */ React.createElement("button", { className: "font-bold text-muted hover:text-ink", onClick: onToggle, "aria-expanded": expanded }, expanded ? "Hide cases" : `Cases (${linked.length})`))), expanded && /* @__PURE__ */ React.createElement("ul", { className: "mt-2 space-y-1 rounded-lg bg-surface2 p-2" }, linked.length === 0 && /* @__PURE__ */ React.createElement("li", { className: "px-2 py-1 text-sm text-muted" }, "No cases logged yet. Use Log case to link one to a patient."), linked.map((c) => {
+    const complete = c.stage >= last;
+    return /* @__PURE__ */ React.createElement("li", { key: c.id, className: "flex flex-wrap items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm" }, /* @__PURE__ */ React.createElement("span", { className: "min-w-0 text-ink" }, /* @__PURE__ */ React.createElement("b", null, c.patientId), " ", complete ? /* @__PURE__ */ React.createElement("span", { className: "text-muted" }, fmtDate(c.updated)) : /* @__PURE__ */ React.createElement("span", { className: "text-muted" }, r.stages[c.stage], " done (", c.stage + 1, " of ", r.stages.length, "), ", fmtDate(c.updated))), /* @__PURE__ */ React.createElement("span", { className: "flex items-center gap-1.5" }, complete ? /* @__PURE__ */ React.createElement(Pill, { tone: "ok" }, /* @__PURE__ */ React.createElement(Icon, { name: "Check", size: 12 }), "Completed") : /* @__PURE__ */ React.createElement("button", { onClick: () => advanceCase(c.id), className: "rounded-md border border-line bg-surface px-2 py-0.5 text-xs font-bold text-ink hover:border-accent" }, c.stage + 1 === last ? "Mark completed" : `Mark ${r.stages[c.stage + 1]} done`), confirmId === c.id ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("button", { onClick: () => {
+      removeCase(c.id), setConfirmId(null);
+    }, className: "rounded-md bg-danger px-2 py-0.5 text-xs font-bold text-onaccent" }, "Remove"), /* @__PURE__ */ React.createElement("button", { onClick: () => setConfirmId(null), className: "px-1 text-xs font-bold text-muted" }, "Keep")) : /* @__PURE__ */ React.createElement("button", { onClick: () => setConfirmId(c.id), className: "rounded-md p-1 text-muted hover:text-danger", "aria-label": `Remove case for ${c.patientId}` }, /* @__PURE__ */ React.createElement(Icon, { name: "Trash2", size: 14 }))));
+  })));
+}
+function QuotaView({ reqStats, stats, cases, updateReq, advanceCase, removeCase, open }) {
+  const [focus, setFocus] = useState("All"), [expanded, setExpanded] = useState(null), groups = useMemo(() => {
+    const keys = [...CLINICAL.map((d) => d.key)];
+    return reqStats.forEach((r) => {
+      keys.includes(r.discipline) || keys.push(r.discipline);
+    }), keys.map((k) => {
+      const items = reqStats.filter((r) => r.discipline === k), target = items.reduce((a, r) => a + r.target, 0), done = items.reduce((a, r) => a + Math.min(r.done, r.target), 0), ip = items.reduce((a, r) => a + r.ip, 0);
+      return { key: k, info: discInfo(k), items, target, done, ip, pct: target ? Math.round(done / target * 100) : 0 };
+    });
+  }, [reqStats]), shown = focus === "All" ? groups : groups.filter((g) => g.key === focus), met = reqStats.filter((r) => r.done >= r.target).length;
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(
+    PageHead,
+    {
+      title: "Clinical quotas",
+      sub: "Adjust counts with the steppers or type a number. Logged cases move the bar automatically as each stage is done.",
+      action: /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-2" }, /* @__PURE__ */ React.createElement("button", { className: btnGhost, onClick: () => open("req", null, focus === "All" ? null : focus) }, /* @__PURE__ */ React.createElement(Icon, { name: "Plus", size: 16 }), "Add requirement"), /* @__PURE__ */ React.createElement("button", { className: btnPrimary, onClick: () => open("log", null, focus === "All" ? null : focus) }, /* @__PURE__ */ React.createElement(Icon, { name: "ClipboardCheck", size: 16 }), "Log requirement"))
+    }
+  ), /* @__PURE__ */ React.createElement("div", { className: "mb-4 grid grid-cols-3 divide-x divide-line rounded-2xl border border-line bg-surface" }, [
+    [`${stats.quotaPct}%`, `${stats.quotaDone} of ${stats.quotaTarget} cases signed off`],
+    [stats.quotaIP, "Cases in progress"],
+    [`${met} / ${reqStats.length}`, "Requirements met"]
+  ].map(([v, l]) => /* @__PURE__ */ React.createElement("div", { key: l, className: "px-3 py-3 sm:px-5" }, /* @__PURE__ */ React.createElement("div", { className: "text-2xl font-bold tabular-nums text-ink sm:text-3xl" }, v), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-muted sm:text-sm" }, l)))), /* @__PURE__ */ React.createElement("div", { className: "mb-2 flex items-center justify-between gap-2" }, /* @__PURE__ */ React.createElement("h2", { className: "text-sm font-bold text-muted" }, "By discipline"), focus !== "All" && /* @__PURE__ */ React.createElement("button", { className: `${linkBtn} text-sm`, onClick: () => setFocus("All") }, "Show all disciplines")), /* @__PURE__ */ React.createElement("div", { className: "mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3" }, groups.filter((g) => g.items.length > 0 || CLINICAL.some((d) => d.key === g.key)).map((g) => /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      key: g.key,
+      onClick: () => setFocus(focus === g.key ? "All" : g.key),
+      "aria-pressed": focus === g.key,
+      className: `rounded-xl border p-3 text-left transition ${focus === g.key ? "border-accent bg-accentsoft" : "border-line bg-surface hover:bg-surface2"}`
+    },
+    /* @__PURE__ */ React.createElement("div", { className: "flex items-baseline justify-between gap-2" }, /* @__PURE__ */ React.createElement("span", { className: `text-sm font-bold leading-snug ${focus === g.key ? "text-accentink" : "text-ink"}` }, g.info.short), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-bold tabular-nums text-ink" }, g.pct, "%")),
+    /* @__PURE__ */ React.createElement("div", { className: "mt-2 h-1.5 overflow-hidden rounded-full bg-surface2" }, /* @__PURE__ */ React.createElement("div", { className: "h-full rounded-full", style: { width: `${g.pct}%`, background: g.info.hue } })),
+    /* @__PURE__ */ React.createElement("div", { className: "mt-1.5 text-xs text-muted" }, g.done, " of ", g.target, g.ip ? `, ${g.ip} in progress` : "")
+  ))), /* @__PURE__ */ React.createElement("div", { className: "mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted", "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("span", { className: "flex items-center gap-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "h-2.5 w-5 rounded-sm bg-accent" }), "Completed"), /* @__PURE__ */ React.createElement("span", { className: "flex items-center gap-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "h-2.5 w-5 rounded-sm", style: { background: "repeating-linear-gradient(135deg, rgb(var(--accent)) 0 2px, transparent 2px 6px)" } }, /* @__PURE__ */ React.createElement("span", { className: "block h-full w-1/2 bg-accent/50" })), "In progress (light fill shows stages done)"), /* @__PURE__ */ React.createElement("span", { className: "flex items-center gap-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "h-2.5 w-0.5 bg-ink" }), "Target, when you're over it")), /* @__PURE__ */ React.createElement("div", { className: "space-y-5" }, shown.map((g) => /* @__PURE__ */ React.createElement(
+    Section,
+    {
+      key: g.key,
+      accent: g.info.hue,
+      title: /* @__PURE__ */ React.createElement("span", { className: "flex flex-wrap items-baseline gap-2" }, g.key, /* @__PURE__ */ React.createElement("span", { className: "text-sm font-bold tabular-nums text-muted" }, g.pct, "%")),
+      action: /* @__PURE__ */ React.createElement("button", { className: `${linkBtn} text-sm`, onClick: () => open("req", null, g.key) }, "Add requirement")
+    },
+    g.items.length === 0 ? /* @__PURE__ */ React.createElement(Empty, { icon: "ClipboardCheck", title: "No requirements yet" }, "Add the requirements from your logbook for this discipline.") : /* @__PURE__ */ React.createElement("ul", { className: "divide-y divide-line" }, g.items.map((r) => /* @__PURE__ */ React.createElement(
+      RequirementRow,
+      {
+        key: r.id,
+        r,
+        hue: g.info.hue,
+        cases,
+        expanded: expanded === r.id,
+        onToggle: () => setExpanded(expanded === r.id ? null : r.id),
+        updateReq,
+        open,
+        advanceCase,
+        removeCase
+      }
+    )))
+  ))));
+}
+function StudyView({ topics, setTopics, open, toast }) {
+  const [q, setQ] = useState(""), [disc, setDisc] = useState("All"), [dueOnly, setDueOnly] = useState(!1), [mastery, setMastery] = useState("All"), isDue = (t) => daysFrom(t.nextDue) <= 0, rows = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    return topics.filter((t) => (disc === "All" || t.discipline === disc) && (mastery === "All" || t.mastery === mastery) && (!dueOnly || isDue(t)) && (!s || t.name.toLowerCase().includes(s))).sort((a, b) => a.nextDue.localeCompare(b.nextDue) || b.stars - a.stars);
+  }, [topics, q, disc, dueOnly, mastery]), dueCount = topics.filter((t) => isDue(t) && (disc === "All" || t.discipline === disc)).length, dueByDisc = useMemo(() => {
+    const m = {};
+    return topics.forEach((t) => {
+      isDue(t) && (m[t.discipline] = (m[t.discipline] || 0) + 1);
+    }), Object.keys(m).forEach((k) => {
+      m[k] = `${m[k]} due`;
+    }), m;
+  }, [topics]), review = (id, rating) => {
+    const t = topics.find((x) => x.id === id);
+    if (!t) return;
+    let interval, m;
+    rating === "again" ? (interval = 1, m = "Learning") : rating === "good" ? (interval = Math.max(2, Math.round(t.interval * 2)), m = interval >= 21 ? "Mastered" : "Review") : (interval = Math.max(4, Math.round(t.interval * 3)), m = interval >= 14 ? "Mastered" : "Review");
+    const next = addDays(interval);
+    setTopics((ts) => ts.map((x) => x.id === id ? { ...x, interval, mastery: m, lastReviewed: TODAY_ISO, nextDue: next } : x)), toast(`Next review ${fmtDate(next)}`);
+  }, setStars = (id, v) => setTopics((ts) => ts.map((t) => t.id === id ? { ...t, stars: v } : t)), masteryTone = { Learning: "danger", Review: "warn", Mastered: "ok" };
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(
+    PageHead,
+    {
+      title: "Study and spaced repetition",
+      sub: "Rate each review honestly. Again brings it back tomorrow, Good doubles the gap, Easy triples it.",
+      action: /* @__PURE__ */ React.createElement("button", { className: btnPrimary, onClick: () => open("topic", null, disc) }, /* @__PURE__ */ React.createElement(Icon, { name: "Plus", size: 16 }), "Add topic")
+    }
+  ), /* @__PURE__ */ React.createElement("div", { className: "mb-4 flex flex-wrap items-center gap-2" }, /* @__PURE__ */ React.createElement("div", { className: "w-full sm:w-auto sm:min-w-[260px]" }, /* @__PURE__ */ React.createElement(DisciplineSelect, { id: "st-disc", value: disc, onChange: setDisc, includeAll: "All disciplines", counts: dueByDisc })), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => setDueOnly(!dueOnly),
+      "aria-pressed": dueOnly,
+      className: `inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-bold transition ${dueOnly ? "border-accent bg-accent text-onaccent" : "border-line bg-surface text-ink hover:bg-surface2"}`
+    },
+    /* @__PURE__ */ React.createElement(Icon, { name: "Clock", size: 16 }),
+    "Due for review today (",
+    dueCount,
+    ")"
+  ), /* @__PURE__ */ React.createElement("select", { id: "st-mastery", className: `${inputCls} w-full sm:w-auto`, value: mastery, onChange: (e) => setMastery(e.target.value), "aria-label": "Filter by mastery" }, /* @__PURE__ */ React.createElement("option", { value: "All" }, "All mastery levels"), MASTERY.map((m) => /* @__PURE__ */ React.createElement("option", { key: m }, m))), /* @__PURE__ */ React.createElement(SearchBox, { id: "st-search", value: q, onChange: setQ, placeholder: "Search topics" })), /* @__PURE__ */ React.createElement(Section, { title: `${disc === "All" ? "All disciplines" : disc} (${rows.length})` }, rows.length === 0 ? /* @__PURE__ */ React.createElement(Empty, { icon: "CheckCircle2", title: dueOnly ? "Nothing left to review today" : "No topics match" }, dueOnly ? "Add a new topic or come back tomorrow." : "Clear the filters to see all topics.") : /* @__PURE__ */ React.createElement("div", { className: "overflow-x-auto" }, /* @__PURE__ */ React.createElement("table", { className: "w-full min-w-[940px] text-left text-sm" }, /* @__PURE__ */ React.createElement("thead", { className: "bg-surface2 text-muted" }, /* @__PURE__ */ React.createElement("tr", null, ["Topic", "Discipline", "High-yield", "Mastery", "Last reviewed", "Next due", "Review"].map((h) => /* @__PURE__ */ React.createElement("th", { key: h, className: "px-4 py-2.5 font-bold" }, h)))), /* @__PURE__ */ React.createElement("tbody", { className: "divide-y divide-line" }, rows.map((t) => {
+    const n = daysFrom(t.nextDue);
+    return /* @__PURE__ */ React.createElement("tr", { key: t.id, className: "align-top hover:bg-surface2/60" }, /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3 text-[15px] text-ink max-w-[340px]" }, t.name), /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3" }, /* @__PURE__ */ React.createElement(DiscChip, { name: t.discipline, short: !0 })), /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3" }, /* @__PURE__ */ React.createElement(Stars, { value: t.stars, onChange: (v) => setStars(t.id, v) })), /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3" }, /* @__PURE__ */ React.createElement(Pill, { tone: masteryTone[t.mastery] }, t.mastery)), /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3 text-ink whitespace-nowrap" }, fmtDate(t.lastReviewed)), /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3 whitespace-nowrap" }, /* @__PURE__ */ React.createElement("div", { className: "text-ink" }, fmtDate(t.nextDue)), /* @__PURE__ */ React.createElement("div", { className: `text-xs ${n < 0 ? "font-bold text-danger" : n === 0 ? "font-bold text-warn" : "text-muted"}` }, n < 0 ? `Overdue ${-n}d` : relDay(t.nextDue))), /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3" }, /* @__PURE__ */ React.createElement("div", { className: "flex gap-1" }, [["again", "Again"], ["good", "Good"], ["easy", "Easy"]].map(([k, label]) => /* @__PURE__ */ React.createElement("button", { key: k, onClick: () => review(t.id, k), className: "rounded-md border border-line bg-surface px-2 py-1 text-xs font-bold text-ink hover:border-accent hover:text-accent" }, label)))));
+  }))))));
+}
+function JournalView({ journal, open }) {
+  const [q, setQ] = useState(""), [disc, setDisc] = useState("All"), [tag, setTag] = useState("All"), rows = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    return journal.filter((j) => (disc === "All" || j.discipline === disc) && (tag === "All" || j.tags.includes(tag)) && (!s || [j.description, j.feedback, j.takeaways, j.actionPlan, j.patientId, j.tags.join(" ")].join(" ").toLowerCase().includes(s))).sort((a, b) => b.date.localeCompare(a.date));
+  }, [journal, q, disc, tag]), block = (label, text, icon) => text ? /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "mb-0.5 flex items-center gap-1.5 text-sm font-bold text-muted" }, /* @__PURE__ */ React.createElement(Icon, { name: icon, size: 14 }), label), /* @__PURE__ */ React.createElement("p", { className: "max-w-[75ch] text-[15px] leading-relaxed text-ink" }, text)) : null;
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(
+    PageHead,
+    {
+      title: "Reflective journal",
+      sub: "What happened, what faculty said, and what you'll change. Search across every note.",
+      action: /* @__PURE__ */ React.createElement("button", { className: btnPrimary, onClick: () => open("journal") }, /* @__PURE__ */ React.createElement(Icon, { name: "NotebookPen", size: 16 }), "New entry")
+    }
+  ), /* @__PURE__ */ React.createElement("div", { className: "mb-3 flex flex-wrap gap-2" }, /* @__PURE__ */ React.createElement(SearchBox, { id: "jn-search", value: q, onChange: setQ, placeholder: "Search notes, feedback, patient codes" }), /* @__PURE__ */ React.createElement("div", { className: "w-full sm:w-auto sm:min-w-[240px]" }, /* @__PURE__ */ React.createElement(DisciplineSelect, { id: "jn-disc", value: disc, onChange: setDisc, includeAll: "All disciplines" }))), /* @__PURE__ */ React.createElement("div", { className: "mb-5 flex flex-wrap gap-2", role: "group", "aria-label": "Filter by tag" }, ["All", ...TAGS].map((t) => /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      key: t,
+      onClick: () => setTag(t),
+      "aria-pressed": tag === t,
+      className: `rounded-full border px-3 py-1 text-sm font-bold transition ${tag === t ? "border-accent bg-accentsoft text-accentink" : "border-line bg-surface text-muted hover:bg-surface2"}`
+    },
+    t === "All" ? "All tags" : t
+  ))), rows.length === 0 ? /* @__PURE__ */ React.createElement(Section, null, /* @__PURE__ */ React.createElement(Empty, { icon: "NotebookPen", title: "No entries match" }, "Try another search, or write today's reflection.")) : /* @__PURE__ */ React.createElement("ol", { className: "relative ml-1.5 space-y-4 border-l-2 border-line pl-5 sm:pl-7" }, rows.map((j) => /* @__PURE__ */ React.createElement("li", { key: j.id, className: "relative" }, /* @__PURE__ */ React.createElement("span", { className: "absolute -left-[27px] top-5 h-3 w-3 rounded-full ring-4 ring-bg sm:-left-[35px]", style: { background: discInfo(j.discipline).hue } }), /* @__PURE__ */ React.createElement("article", { className: "rounded-2xl border border-line bg-surface p-4 sm:p-5" }, /* @__PURE__ */ React.createElement("header", { className: "flex flex-wrap items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { className: "font-bold text-ink" }, parseISO(j.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })), /* @__PURE__ */ React.createElement(DiscChip, { name: j.discipline }), j.patientId && /* @__PURE__ */ React.createElement(Pill, null, j.patientId), /* @__PURE__ */ React.createElement("span", { className: "ml-auto flex flex-wrap gap-1.5" }, j.tags.map((t) => /* @__PURE__ */ React.createElement("span", { key: t, className: "text-xs font-bold text-accent" }, t)))), /* @__PURE__ */ React.createElement("div", { className: "mt-3 space-y-3" }, /* @__PURE__ */ React.createElement("p", { className: "max-w-[75ch] text-[15px] leading-relaxed text-ink" }, j.description), block("Faculty feedback", j.feedback, "MessageSquareQuote"), block("Complications and takeaways", j.takeaways, "AlertTriangle"), j.actionPlan && /* @__PURE__ */ React.createElement("div", { className: "rounded-xl bg-accentsoft px-3.5 py-2.5" }, /* @__PURE__ */ React.createElement("div", { className: "mb-0.5 flex items-center gap-1.5 text-sm font-bold text-accentink" }, /* @__PURE__ */ React.createElement(Icon, { name: "Target", size: 14 }), "Action plan"), /* @__PURE__ */ React.createElement("p", { className: "max-w-[75ch] text-[15px] leading-relaxed text-ink" }, j.actionPlan))))))));
+}
+function TipForm({ initial, presetDiscipline, lecturers, lectures, onSave, onDelete, onClose }) {
+  const [f, setF] = useState(initial ? { ...initial } : {
+    date: TODAY_ISO,
+    discipline: presetDiscipline && presetDiscipline !== "All" ? presetDiscipline : DISCIPLINES[0].key,
+    lecture: "",
+    lecturer: "",
+    tip: "",
+    formats: [],
+    emphasis: "Emphasised",
+    revised: !1
+  }), [err, setErr] = useState(""), [confirmDelete, setConfirmDelete] = useState(!1), set = (k) => (e) => setF({ ...f, [k]: e.target.value }), toggleFormat = (x) => setF({ ...f, formats: f.formats.includes(x) ? f.formats.filter((y) => y !== x) : [...f.formats, x] }), save = () => {
+    if (!f.tip.trim()) {
+      setErr("Write the tip to save it.");
+      return;
+    }
+    onSave({ ...f, tip: f.tip.trim(), lecture: f.lecture.trim(), lecturer: f.lecturer.trim(), sample: !1 });
+  };
+  return /* @__PURE__ */ React.createElement(
+    Modal,
+    {
+      title: initial ? "Edit exam tip" : "Add exam tip",
+      onClose,
+      footer: /* @__PURE__ */ React.createElement(React.Fragment, null, initial && !confirmDelete && /* @__PURE__ */ React.createElement("button", { className: `${btnGhost} mr-auto text-danger`, onClick: () => setConfirmDelete(!0) }, /* @__PURE__ */ React.createElement(Icon, { name: "Trash2", size: 16 }), "Delete"), /* @__PURE__ */ React.createElement("button", { className: btnGhost, onClick: onClose }, "Cancel"), /* @__PURE__ */ React.createElement("button", { className: btnPrimary, onClick: save }, initial ? "Save changes" : "Save tip"))
+    },
+    confirmDelete && /* @__PURE__ */ React.createElement("div", { className: "rounded-xl border border-danger/40 bg-dangersoft p-3" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-danger" }, "Delete this tip? You can undo for a few seconds afterwards."), /* @__PURE__ */ React.createElement("div", { className: "mt-2 flex gap-2" }, /* @__PURE__ */ React.createElement("button", { className: btnGhost, onClick: () => setConfirmDelete(!1) }, "Keep it"), /* @__PURE__ */ React.createElement("button", { className: btnDanger, onClick: onDelete }, "Delete tip"))),
+    /* @__PURE__ */ React.createElement(Field, { label: "Subject" }, /* @__PURE__ */ React.createElement(DisciplineSelect, { id: "xf-disc", value: f.discipline, onChange: (v) => setF({ ...f, discipline: v }) })),
+    /* @__PURE__ */ React.createElement(Field, { label: "Lecture or session", hint: "Pick a previous one or type a new title." }, /* @__PURE__ */ React.createElement("input", { id: "xf-lecture", list: "xf-lecture-list", className: inputCls, value: f.lecture, onChange: set("lecture"), placeholder: "e.g. Management of impacted third molars", autoComplete: "off" }), /* @__PURE__ */ React.createElement("datalist", { id: "xf-lecture-list" }, lectures.map((x) => /* @__PURE__ */ React.createElement("option", { key: x, value: x })))),
+    /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-1 gap-3 sm:grid-cols-[3fr_2fr]" }, /* @__PURE__ */ React.createElement(Field, { label: "Lecturer" }, /* @__PURE__ */ React.createElement("input", { id: "xf-lecturer", list: "xf-lecturer-list", className: inputCls, value: f.lecturer, onChange: set("lecturer"), placeholder: "e.g. Dr. Farah", autoComplete: "off" }), /* @__PURE__ */ React.createElement("datalist", { id: "xf-lecturer-list" }, lecturers.map((x) => /* @__PURE__ */ React.createElement("option", { key: x, value: x })))), /* @__PURE__ */ React.createElement(Field, { label: "Date" }, /* @__PURE__ */ React.createElement("input", { id: "xf-date", type: "date", className: inputCls, value: f.date, onChange: set("date") }))),
+    /* @__PURE__ */ React.createElement(Field, { label: "Tip", hint: "Write it the way the lecturer said it, plus anything you need to look up." }, /* @__PURE__ */ React.createElement("textarea", { id: "xf-tip", rows: "5", className: inputCls, value: f.tip, onChange: set("tip"), placeholder: "e.g. Know Pell and Gregory and Winter's classification. Likely an OSCE radiograph station." })),
+    /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { className: "mb-1.5 block text-sm font-bold text-ink" }, "How sure is it?"), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-1.5", role: "radiogroup", "aria-label": "Emphasis" }, EMPHASIS.map((e) => /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: e,
+        type: "button",
+        role: "radio",
+        "aria-checked": f.emphasis === e,
+        onClick: () => setF({ ...f, emphasis: e }),
+        className: `rounded-lg border px-2 py-2 text-sm font-bold transition ${f.emphasis === e ? "border-accent bg-accentsoft text-accentink" : "border-line text-muted hover:bg-surface2"}`
+      },
+      e
+    )))),
+    /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { className: "mb-1.5 block text-sm font-bold text-ink" }, "Likely exam format"), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-2" }, EXAM_FORMATS.map((x) => /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: x,
+        type: "button",
+        onClick: () => toggleFormat(x),
+        "aria-pressed": f.formats.includes(x),
+        className: `rounded-full border px-3 py-1 text-sm font-bold transition ${f.formats.includes(x) ? "border-accent bg-accentsoft text-accentink" : "border-line text-muted hover:bg-surface2"}`
+      },
+      x
+    )))),
+    initial && /* @__PURE__ */ React.createElement("label", { className: "flex cursor-pointer items-center gap-2 text-sm font-bold text-ink" }, /* @__PURE__ */ React.createElement("input", { id: "xf-revised", type: "checkbox", checked: f.revised, onChange: (e) => setF({ ...f, revised: e.target.checked }), className: "accent-[rgb(var(--accent))] h-4 w-4" }), "I've revised this"),
+    err && /* @__PURE__ */ React.createElement(Notice, { tone: "danger" }, err)
+  );
+}
+function TipCard({ t, inStudy, onToggleRevised, onAddToStudy, onOpenStudy, onEdit, showSubject }) {
+  return /* @__PURE__ */ React.createElement("article", { className: `rounded-xl border bg-surface p-4 ${t.emphasis === "Will come out" && !t.revised ? "border-warn/50" : "border-line"}` }, /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap items-center gap-1.5" }, /* @__PURE__ */ React.createElement(Pill, { tone: emphasisTone[t.emphasis] }, t.emphasis === "Will come out" && /* @__PURE__ */ React.createElement(Icon, { name: "Flame", size: 12 }), t.emphasis), showSubject && /* @__PURE__ */ React.createElement(DiscChip, { name: t.discipline, short: !0 }), t.formats.map((x) => /* @__PURE__ */ React.createElement("span", { key: x, className: "rounded-md border border-line px-1.5 py-0.5 text-xs font-bold text-muted" }, x)), t.sample && /* @__PURE__ */ React.createElement("span", { className: "rounded-md bg-surface2 px-1.5 py-0.5 text-xs font-bold text-muted" }, "Example"), t.revised && /* @__PURE__ */ React.createElement("span", { className: "ml-auto inline-flex items-center gap-1 text-xs font-bold text-ok" }, /* @__PURE__ */ React.createElement(Icon, { name: "CheckCircle2", size: 13 }), "Revised")), /* @__PURE__ */ React.createElement("p", { className: "mt-2.5 max-w-[75ch] text-[15px] leading-relaxed text-ink" }, t.tip), /* @__PURE__ */ React.createElement("div", { className: "mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2" }, /* @__PURE__ */ React.createElement("div", { className: "flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted" }, t.lecture && /* @__PURE__ */ React.createElement("span", { className: "inline-flex min-w-0 items-center gap-1" }, /* @__PURE__ */ React.createElement(Icon, { name: "Presentation", size: 14, className: "shrink-0" }), /* @__PURE__ */ React.createElement("span", { className: "truncate" }, t.lecture)), t.lecturer && /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1" }, /* @__PURE__ */ React.createElement(Icon, { name: "User", size: 14 }), t.lecturer), /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1" }, /* @__PURE__ */ React.createElement(Icon, { name: "CalendarDays", size: 14 }), fmtDate(t.date))), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap items-center gap-1.5" }, /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: onToggleRevised,
+      "aria-pressed": t.revised,
+      className: `inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-bold transition ${t.revised ? "border-ok/40 bg-oksoft text-ok" : "border-line bg-surface text-ink hover:border-accent hover:text-accent"}`
+    },
+    /* @__PURE__ */ React.createElement(Icon, { name: "Check", size: 13 }),
+    t.revised ? "Revised" : "Mark revised"
+  ), inStudy ? /* @__PURE__ */ React.createElement("button", { onClick: onOpenStudy, className: "inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-bold text-accent hover:underline" }, /* @__PURE__ */ React.createElement(Icon, { name: "BookOpen", size: 13 }), "In study schedule") : /* @__PURE__ */ React.createElement("button", { onClick: onAddToStudy, className: "inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2 py-1 text-xs font-bold text-ink hover:border-accent hover:text-accent" }, /* @__PURE__ */ React.createElement(Icon, { name: "BookmarkPlus", size: 13 }), "Add to study"), /* @__PURE__ */ React.createElement("button", { onClick: onEdit, className: "inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2 py-1 text-xs font-bold text-ink hover:border-accent hover:text-accent", "aria-label": "Edit tip" }, /* @__PURE__ */ React.createElement(Icon, { name: "Pencil", size: 13 }), "Edit"))));
+}
+function TipsView({ tips, topics, open, toggleRevised, addToStudy, clearExamples, go }) {
+  const [q, setQ] = useState(""), [disc, setDisc] = useState("All"), [format, setFormat] = useState("All"), [emph, setEmph] = useState("All"), [notRevised, setNotRevised] = useState(!1), [group, setGroup] = useState("subject"), rows = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    return tips.filter((t) => (disc === "All" || t.discipline === disc) && (format === "All" || t.formats.includes(format)) && (emph === "All" || t.emphasis === emph) && (!notRevised || !t.revised) && (!s || [t.tip, t.lecture, t.lecturer, t.discipline].join(" ").toLowerCase().includes(s)));
+  }, [tips, q, disc, format, emph, notRevised]), groups = useMemo(() => {
+    const byPriority = (a, b) => emphasisRank(b.emphasis) - emphasisRank(a.emphasis) || b.date.localeCompare(a.date);
+    return group === "date" ? [{ key: "all", items: [...rows].sort((a, b) => b.date.localeCompare(a.date)) }] : DISCIPLINES.map((d) => ({ key: d.key, items: rows.filter((t) => t.discipline === d.key).sort(byPriority) })).concat([{ key: "Other", items: rows.filter((t) => !DISCIPLINES.some((d) => d.key === t.discipline)).sort(byPriority) }]).filter((g) => g.items.length);
+  }, [rows, group]), counts = useMemo(() => {
+    const m = {};
+    return tips.forEach((t) => {
+      m[t.discipline] = (m[t.discipline] || 0) + 1;
+    }), Object.keys(m).forEach((k) => {
+      m[k] = plural(m[k], "tip");
+    }), m;
+  }, [tips]), hot = tips.filter((t) => t.emphasis === "Will come out").length, left = tips.filter((t) => !t.revised).length, hasExamples = tips.some((t) => t.sample), topicIds = new Set(topics.map((t) => t.id)), card = (t, showSubject) => /* @__PURE__ */ React.createElement(
+    TipCard,
+    {
+      key: t.id,
+      t,
+      showSubject,
+      inStudy: !!t.topicId && topicIds.has(t.topicId),
+      onToggleRevised: () => toggleRevised(t.id),
+      onAddToStudy: () => addToStudy(t),
+      onOpenStudy: () => go("study"),
+      onEdit: () => open("tip", t.id)
+    }
+  );
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(
+    PageHead,
+    {
+      title: "Exam tips",
+      sub: "Hints lecturers give in lectures, tutorials and clinics. Filter by subject before an exam and send the important ones to your study schedule.",
+      action: /* @__PURE__ */ React.createElement("button", { className: btnPrimary, onClick: () => open("tip", null, disc) }, /* @__PURE__ */ React.createElement(Icon, { name: "Plus", size: 16 }), "Add tip")
+    }
+  ), hasExamples && /* @__PURE__ */ React.createElement("div", { className: "mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-surface2 px-4 py-3 text-sm" }, /* @__PURE__ */ React.createElement("span", { className: "text-ink" }, "Tips marked Example show how this page works. Clear them once you've added your own."), /* @__PURE__ */ React.createElement("button", { className: btnGhost, onClick: clearExamples }, "Clear examples")), /* @__PURE__ */ React.createElement("div", { className: "mb-4 grid grid-cols-3 divide-x divide-line rounded-2xl border border-line bg-surface" }, [[tips.length, "Tips saved"], [hot, 'Marked "will come out"'], [left, "Not revised yet"]].map(([v, l]) => /* @__PURE__ */ React.createElement("div", { key: l, className: "px-3 py-3 sm:px-5" }, /* @__PURE__ */ React.createElement("div", { className: "text-2xl font-bold tabular-nums text-ink sm:text-3xl" }, v), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-muted sm:text-sm" }, l)))), /* @__PURE__ */ React.createElement("div", { className: "mb-3 flex flex-wrap items-center gap-2" }, /* @__PURE__ */ React.createElement(SearchBox, { id: "xt-search", value: q, onChange: setQ, placeholder: "Search tips, lectures, lecturers" }), /* @__PURE__ */ React.createElement("div", { className: "w-full sm:w-auto sm:min-w-[240px]" }, /* @__PURE__ */ React.createElement(DisciplineSelect, { id: "xt-disc", value: disc, onChange: setDisc, includeAll: "All subjects", counts })), /* @__PURE__ */ React.createElement("select", { id: "xt-format", className: `${inputCls} w-full sm:w-auto`, value: format, onChange: (e) => setFormat(e.target.value), "aria-label": "Filter by exam format" }, /* @__PURE__ */ React.createElement("option", { value: "All" }, "All exam formats"), EXAM_FORMATS.map((x) => /* @__PURE__ */ React.createElement("option", { key: x }, x)))), /* @__PURE__ */ React.createElement("div", { className: "mb-5 flex flex-wrap items-center gap-2" }, ["All", ...EMPHASIS].map((e) => /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      key: e,
+      onClick: () => setEmph(e),
+      "aria-pressed": emph === e,
+      className: `rounded-full border px-3 py-1 text-sm font-bold transition ${emph === e ? "border-accent bg-accentsoft text-accentink" : "border-line bg-surface text-muted hover:bg-surface2"}`
+    },
+    e === "All" ? "Any emphasis" : e
+  )), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => setNotRevised(!notRevised),
+      "aria-pressed": notRevised,
+      className: `inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-bold transition ${notRevised ? "border-accent bg-accent text-onaccent" : "border-line bg-surface text-ink hover:bg-surface2"}`
+    },
+    /* @__PURE__ */ React.createElement(Icon, { name: "Clock", size: 14 }),
+    "Not revised yet"
+  ), /* @__PURE__ */ React.createElement("span", { className: "ml-auto inline-flex rounded-lg border border-line bg-surface p-0.5 text-sm font-bold", role: "group", "aria-label": "Arrange tips" }, [["subject", "By subject"], ["date", "Newest first"]].map(([k, l]) => /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      key: k,
+      onClick: () => setGroup(k),
+      "aria-pressed": group === k,
+      className: `rounded-md px-2.5 py-1 ${group === k ? "bg-accentsoft text-accentink" : "text-muted hover:text-ink"}`
+    },
+    l
+  )))), rows.length === 0 ? /* @__PURE__ */ React.createElement(Section, null, tips.length === 0 ? /* @__PURE__ */ React.createElement(Empty, { icon: "Lightbulb", title: "No exam tips yet" }, 'When a lecturer says "this will come out", add it here with the subject and lecture.') : /* @__PURE__ */ React.createElement(Empty, { icon: "Lightbulb", title: "No tips match" }, "Clear the search or filters to see all tips.")) : group === "date" ? /* @__PURE__ */ React.createElement("div", { className: "space-y-3" }, groups[0].items.map((t) => card(t, !0))) : /* @__PURE__ */ React.createElement("div", { className: "space-y-5" }, groups.map((g) => /* @__PURE__ */ React.createElement(
+    Section,
+    {
+      key: g.key,
+      accent: discInfo(g.key).hue,
+      title: /* @__PURE__ */ React.createElement("span", { className: "flex flex-wrap items-baseline gap-2" }, g.key, /* @__PURE__ */ React.createElement("span", { className: "text-sm font-bold tabular-nums text-muted" }, plural(g.items.length, "tip"))),
+      action: /* @__PURE__ */ React.createElement("button", { className: `${linkBtn} text-sm`, onClick: () => open("tip", null, g.key) }, "Add tip")
+    },
+    /* @__PURE__ */ React.createElement("div", { className: "space-y-3 p-3 sm:p-4" }, g.items.map((t) => card(t, !1)))
+  ))));
+}
+const NAV = [
+  { key: "dashboard", label: "Overview", icon: "LayoutDashboard" },
+  { key: "patients", label: "Patients", icon: "Users" },
+  { key: "quota", label: "Quotas", icon: "ClipboardCheck" },
+  { key: "study", label: "Study", icon: "BookOpen" },
+  { key: "journal", label: "Journal", icon: "NotebookPen" },
+  { key: "tips", label: "Exam tips", short: "Tips", icon: "Lightbulb" }
+];
+function App() {
+  const [boot] = useState(() => {
+    const ok = storageAvailable(), saved = ok ? loadSaved() : null;
+    return { ok, data: saved || makeDefaults(), mode: ok ? saved ? "saved" : "sample" : "unavailable" };
+  }), [data, setData] = useState(boot.data), [store, setStore] = useState({ mode: boot.mode, at: null }), skipSave = useRef(!0), [tab, setTab] = useState("dashboard"), [modal, setModal] = useState(null), [toastMsg, setToastMsg] = useState(null), [downloads, setDownloads] = useState(null), [showNames, setShowNamesState] = useState(() => {
+    try {
+      return window.localStorage.getItem(NAMES_KEY) !== "off";
+    } catch {
+      return !0;
+    }
+  }), setShowNames = (v) => {
+    setShowNamesState(v);
+    try {
+      window.localStorage.setItem(NAMES_KEY, v ? "on" : "off");
+    } catch {
+    }
+  };
+  useEffect(() => {
+    if (skipSave.current) {
+      skipSave.current = !1;
+      return;
+    }
+    try {
+      window.localStorage.setItem(STORE_KEY, JSON.stringify({ app: "chairside", version: 2, savedAt: (/* @__PURE__ */ new Date()).toISOString(), data })), setStore({ mode: "saved", at: /* @__PURE__ */ new Date() });
+    } catch {
+      setStore({ mode: "unavailable", at: null });
+    }
+  }, [data]), useEffect(() => {
+    let alive = !0;
+    const c = window.claude;
+    return c && typeof c.use == "function" && c.use("downloads").then((d) => {
+      alive && setDownloads(d || null);
+    }).catch(() => {
+    }), () => {
+      alive = !1;
+    };
+  }, []), useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [tab]), useEffect(() => {
+    if (!toastMsg) return;
+    const t = setTimeout(() => setToastMsg(null), toastMsg.action ? 6e3 : 2600);
+    return () => clearTimeout(t);
+  }, [toastMsg]);
+  const setters = useMemo(() => {
+    const mk = (k) => (u) => setData((d) => ({ ...d, [k]: typeof u == "function" ? u(d[k]) : u }));
+    return { setPatients: mk("patients"), setLabs: mk("labs"), setRequirements: mk("requirements"), setCases: mk("cases"), setTopics: mk("topics"), setJournal: mk("journal"), setTips: mk("tips") };
+  }, []), { setPatients, setLabs, setRequirements, setCases, setTopics, setJournal, setTips } = setters, { patients, labs, requirements, cases, topics, journal } = data, tips = data.tips || [], tipLecturers = useMemo(() => [...new Set(tips.map((t) => t.lecturer).filter(Boolean))].sort(), [tips]), tipLectures = useMemo(() => [...new Set(tips.map((t) => t.lecture).filter(Boolean))].sort(), [tips]), toggleTipRevised = (id) => {
+    const t = tips.find((x) => x.id === id);
+    t && (setTips((ts) => ts.map((x) => x.id === id ? { ...x, revised: !x.revised } : x)), toast(t.revised ? "Marked as not revised" : "Marked as revised"));
+  }, addTipToStudy = (t) => {
+    const topicId = `T${Date.now()}`, stars = { "Will come out": 5, Emphasised: 4, Mentioned: 3 }[t.emphasis] || 3, name = `${t.lecture ? t.lecture + ": " : ""}${shorten(t.tip, 90)}`;
+    setTopics((ts) => [...ts, { id: topicId, discipline: t.discipline, name, stars, mastery: "Learning", interval: 1, lastReviewed: TODAY_ISO, nextDue: TODAY_ISO }]), setTips((ts) => ts.map((x) => x.id === t.id ? { ...x, topicId } : x)), toast("Added to your study schedule, due today");
+  }, onSaveTip = (values) => {
+    const editing = modal && modal.preset && tips.find((t) => t.id === modal.preset);
+    editing ? (setTips((ts) => ts.map((t) => t.id === editing.id ? { ...t, ...values } : t)), toast("Tip updated")) : (setTips((ts) => [{ ...values, id: `X${Date.now()}`, topicId: "" }, ...ts]), toast("Tip saved")), close();
+  }, onDeleteTip = () => {
+    const id = modal && modal.preset, index = tips.findIndex((t) => t.id === id);
+    if (index < 0) {
+      close();
+      return;
+    }
+    const removed = tips[index];
+    setTips((ts) => ts.filter((t) => t.id !== id)), close(), toast("Tip deleted", { label: "Undo", run: () => {
+      setTips((ts) => ts.some((t) => t.id === removed.id) ? ts : [...ts.slice(0, index), removed, ...ts.slice(index)]), setToastMsg(null);
+    } });
+  }, clearTipExamples = () => {
+    const before = tips;
+    setTips((ts) => ts.filter((t) => !t.sample)), toast("Examples cleared", { label: "Undo", run: () => {
+      setTips(before), setToastMsg(null);
+    } });
+  }, livePatients = useMemo(() => patients.filter((p) => !p.archived), [patients]), updatePatient = (id, patch) => setPatients((ps) => ps.map((p) => p.id === id ? { ...p, ...patch } : p)), archivePatient = (id, archived) => {
+    updatePatient(id, { archived }), toast(archived ? `${id} archived` : `${id} restored to your list`, { label: "Undo", run: () => {
+      updatePatient(id, { archived: !archived }), setToastMsg(null);
+    } });
+  }, toast = (m, action) => setToastMsg({ m, action, k: Date.now() }), removePatient = (id) => {
+    const index = patients.findIndex((p) => p.id === id);
+    if (index < 0) return;
+    const removed = patients[index];
+    setPatients((ps) => ps.filter((p) => p.id !== id)), toast(`${id} removed from the list`, {
+      label: "Undo",
+      run: () => {
+        setPatients((ps) => ps.some((p) => p.id === removed.id) ? ps : [...ps.slice(0, index), removed, ...ps.slice(index)]), setToastMsg(null);
+      }
+    });
+  }, open = (type, preset, extra) => setModal({ type, preset, extra }), close = () => setModal(null), updateReq = (id, patch) => setRequirements((rs) => rs.map((r) => r.id === id ? { ...r, ...patch } : r)), advanceCase = (caseId) => {
+    const c = cases.find((x) => x.id === caseId), r = c && requirements.find((x) => x.id === c.reqId);
+    if (!c || !r) return;
+    const next = Math.min(r.stages.length - 1, c.stage + 1);
+    setCases((cs) => cs.map((x) => x.id === caseId ? { ...x, stage: next, updated: TODAY_ISO } : x)), toast(next === r.stages.length - 1 ? `${c.patientId}: case completed` : `${c.patientId}: ${r.stages[next]} done`);
+  }, removeCase = (caseId) => {
+    setCases((cs) => cs.filter((x) => x.id !== caseId)), toast("Case removed");
+  }, reqStats = useMemo(() => requirements.map((r) => {
+    const last = r.stages.length - 1, rc = cases.filter((c) => c.reqId === r.id), doneCases = rc.filter((c) => c.stage >= last), ipCases = rc.filter((c) => c.stage < last), done = doneCases.length + (r.baseDone || 0), ip = ipCases.length + (r.baseIP || 0);
+    return {
+      ...r,
+      loggedDone: doneCases.length,
+      loggedIP: ipCases.length,
+      done,
+      ip,
+      ipFractions: ipCases.map((c) => (c.stage + 1) / r.stages.length).sort((a, b) => b - a),
+      pct: Math.round(Math.min(done, r.target) / r.target * 100)
+    };
+  }), [requirements, cases]), stats = useMemo(() => {
+    const quotaTarget = reqStats.reduce((a, r) => a + r.target, 0), quotaDone = reqStats.reduce((a, r) => a + Math.min(r.done, r.target), 0), quotaIP = reqStats.reduce((a, r) => a + r.ip, 0), openLabs = labs.filter((l) => !LAB_CLOSED.includes(l.status)), labOverdue = openLabs.filter((l) => daysFrom(l.due) < 0).length, dueTopics = topics.filter((t) => daysFrom(t.nextDue) <= 0), alerts = [];
+    openLabs.filter((l) => daysFrom(l.due) <= 2).sort((a, b) => a.due.localeCompare(b.due)).forEach((l) => {
+      const n = daysFrom(l.due);
+      alerts.push({
+        tone: n < 0 ? "danger" : "warn",
+        icon: "FlaskConical",
+        tab: "patients",
+        title: `${l.patientId}: ${l.item}`,
+        detail: n < 0 ? `Overdue by ${plural(-n, "day")}. Call ${l.tech || "the lab"}${l.contact ? ` (${l.contact})` : ""}.` : `Due back ${relDay(l.due)}. Status: ${l.status.toLowerCase()}.`
+      });
+    });
+    const listNames = (rs) => rs.slice(0, 3).map((r) => `${r.name} (${discInfo(r.discipline).short})`).join(", ") + (rs.length > 3 ? `, and ${rs.length - 3} more` : ""), empty = reqStats.filter((r) => r.done + r.ip === 0);
+    empty.length && alerts.push({ tone: "danger", icon: "Target", tab: "quota", title: `${plural(empty.length, "requirement")} with no patient yet`, detail: `${listNames(empty)}. Screen for suitable patients.` });
+    const behind = reqStats.filter((r) => r.done + r.ip > 0 && r.done + r.ip < r.target && r.pct < 50);
+    return behind.length && alerts.push({ tone: "warn", icon: "Target", tab: "quota", title: `${plural(behind.length, "requirement")} under half done`, detail: `${listNames(behind)}.` }), livePatients.filter((p) => p.reliability === "Low" && p.nextAppt && daysFrom(p.nextAppt) >= 0 && daysFrom(p.nextAppt) <= 7).forEach((p) => {
+      alerts.push({ tone: "warn", icon: "PhoneCall", tab: "patients", title: `${p.id}: low reliability, booked ${relDay(p.nextAppt)}`, detail: "Confirm attendance the day before so you can rebook the chair if needed." });
+    }), {
+      activePatients: livePatients.filter((p) => p.stage !== DONE_STAGE).length,
+      maintenance: livePatients.filter((p) => p.stage === DONE_STAGE).length,
+      labPending: openLabs.length,
+      labOverdue,
+      quotaTarget,
+      quotaDone,
+      quotaIP,
+      quotaPct: quotaTarget ? Math.round(quotaDone / quotaTarget * 100) : 0,
+      dueToday: dueTopics.length,
+      overdueTopics: dueTopics.filter((t) => daysFrom(t.nextDue) < 0).length,
+      alerts
+    };
+  }, [reqStats, labs, topics, livePatients]), sortedJournal = useMemo(() => [...journal].sort((a, b) => b.date.localeCompare(a.date)), [journal]), onLogCase = (res) => {
+    const last = res.req.stages.length - 1;
+    res.type === "update" ? (setCases((cs) => cs.map((c) => c.id === res.id ? { ...c, stage: res.stage, updated: res.date } : c)), toast(res.stage === last ? `${res.patientId}: case completed` : `${res.patientId}: ${res.req.stages[res.stage]} done`)) : (setCases((cs) => [...cs, res.case]), toast(res.case.stage === last ? "Case logged as completed" : `Case logged, ${res.req.stages[res.case.stage]} done`)), close();
+  }, onSaveReq = (values) => {
+    const editing = modal && modal.preset && requirements.find((r) => r.id === modal.preset);
+    editing ? (setRequirements((rs) => rs.map((r) => r.id === editing.id ? { ...r, ...values } : r)), setCases((cs) => cs.map((c) => c.reqId === editing.id ? { ...c, stage: Math.min(c.stage, values.stages.length - 1) } : c)), toast("Requirement updated")) : (setRequirements((rs) => [...rs, { id: `req-${Date.now()}`, ...values, baseDone: 0, baseIP: 0 }]), toast("Requirement added")), close();
+  }, onDeleteReq = () => {
+    const id = modal && modal.preset;
+    setRequirements((rs) => rs.filter((r) => r.id !== id)), setCases((cs) => cs.filter((c) => c.reqId !== id)), close(), toast("Requirement deleted");
+  }, onImport = (clean) => {
+    setData(clean), toast("Backup imported");
+  }, onReset = () => {
+    try {
+      window.localStorage.removeItem(STORE_KEY);
+    } catch {
+    }
+    skipSave.current = !0, setData(makeDefaults()), setStore({ mode: boot.ok ? "sample" : "unavailable", at: null }), toast("Sample data restored");
+  }, views = {
+    dashboard: /* @__PURE__ */ React.createElement(Dashboard, { stats, patients: livePatients, journal: sortedJournal, go: setTab, open, showNames }),
+    patients: /* @__PURE__ */ React.createElement(PatientsView, { patients, setPatients, labs, setLabs, open, toast, showNames, setShowNames }),
+    quota: /* @__PURE__ */ React.createElement(QuotaView, { reqStats, stats, cases, updateReq, advanceCase, removeCase, open }),
+    study: /* @__PURE__ */ React.createElement(StudyView, { topics, setTopics, open, toast }),
+    journal: /* @__PURE__ */ React.createElement(JournalView, { journal, open }),
+    tips: /* @__PURE__ */ React.createElement(TipsView, { tips, topics, open, toggleRevised: toggleTipRevised, addToStudy: addTipToStudy, clearExamples: clearTipExamples, go: setTab })
+  }, storeLabel = store.mode === "saved" ? "Saved in this browser" : store.mode === "sample" ? "Showing sample data" : "Not saving here", editingReq = modal && modal.type === "req" && modal.preset ? requirements.find((r) => r.id === modal.preset) : null;
+  return /* @__PURE__ */ React.createElement("div", { className: "min-h-full bg-bg text-ink md:flex" }, /* @__PURE__ */ React.createElement("aside", { className: "hidden md:flex md:w-60 md:shrink-0 md:flex-col md:border-r md:border-line md:bg-surface sticky-side" }, /* @__PURE__ */ React.createElement("div", { className: "px-5 pt-6 pb-5" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2.5" }, /* @__PURE__ */ React.createElement("span", { className: "flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-onaccent" }, /* @__PURE__ */ React.createElement(Icon, { name: "Stethoscope", size: 19 })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-lg font-bold leading-none text-ink" }, "Chairside"), /* @__PURE__ */ React.createElement("div", { className: "mt-1 text-xs text-muted" }, "BDS Year 4, Universiti Malaya")))), /* @__PURE__ */ React.createElement("nav", { className: "flex-1 space-y-1 px-3", "aria-label": "Main" }, NAV.map((n) => /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      key: n.key,
+      onClick: () => setTab(n.key),
+      "aria-current": tab === n.key ? "page" : void 0,
+      className: `flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] font-bold transition ${tab === n.key ? "bg-accentsoft text-accentink" : "text-muted hover:bg-surface2 hover:text-ink"}`
+    },
+    /* @__PURE__ */ React.createElement(Icon, { name: n.icon, size: 18 }),
+    n.label,
+    n.key === "study" && stats.dueToday > 0 && /* @__PURE__ */ React.createElement("span", { className: "ml-auto rounded-full bg-warnsoft px-2 text-xs text-warn" }, stats.dueToday),
+    n.key === "dashboard" && stats.alerts.length > 0 && /* @__PURE__ */ React.createElement("span", { className: "ml-auto rounded-full bg-dangersoft px-2 text-xs text-danger" }, stats.alerts.length)
+  ))), /* @__PURE__ */ React.createElement("div", { className: "space-y-2 p-3" }, /* @__PURE__ */ React.createElement("button", { onClick: () => open("data"), className: "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-surface2" }, /* @__PURE__ */ React.createElement(Icon, { name: "Database", size: 18, className: "text-muted" }), /* @__PURE__ */ React.createElement("span", { className: "min-w-0" }, /* @__PURE__ */ React.createElement("span", { className: "block text-sm font-bold text-ink" }, "Your data"), /* @__PURE__ */ React.createElement("span", { className: `block text-xs ${store.mode === "unavailable" ? "font-bold text-warn" : "text-muted"}` }, storeLabel))), /* @__PURE__ */ React.createElement("div", { className: "rounded-xl bg-surface2 p-3 text-xs leading-relaxed text-muted" }, "Patient names and registration numbers stay in this browser and in backups you export. Follow your clinic's rules on patient data."))), /* @__PURE__ */ React.createElement("header", { className: "md:hidden flex items-center gap-2.5 border-b border-line bg-surface px-4 py-3" }, /* @__PURE__ */ React.createElement("span", { className: "flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-onaccent" }, /* @__PURE__ */ React.createElement(Icon, { name: "Stethoscope", size: 17 })), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-ink" }, "Chairside"), /* @__PURE__ */ React.createElement("span", { className: "truncate text-xs text-muted" }, "BDS Year 4, UM"), /* @__PURE__ */ React.createElement("button", { onClick: () => open("data"), className: "ml-auto flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-xs font-bold text-ink", "aria-label": "Your data" }, /* @__PURE__ */ React.createElement(Icon, { name: "Database", size: 15, className: store.mode === "unavailable" ? "text-warn" : "text-muted" }), "Data")), /* @__PURE__ */ React.createElement("main", { className: "min-w-0 flex-1 px-4 pt-5 pb-28 sm:px-6 md:pb-10 lg:px-10 lg:pt-8" }, /* @__PURE__ */ React.createElement("div", { className: "mx-auto max-w-6xl" }, views[tab])), /* @__PURE__ */ React.createElement("nav", { className: "md:hidden fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-line bg-surface/95 backdrop-blur", style: { paddingBottom: "env(safe-area-inset-bottom, 0px)" }, "aria-label": "Main" }, NAV.map((n) => /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      key: n.key,
+      onClick: () => setTab(n.key),
+      "aria-current": tab === n.key ? "page" : void 0,
+      className: `relative flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-bold ${tab === n.key ? "text-accent" : "text-muted"}`
+    },
+    /* @__PURE__ */ React.createElement(Icon, { name: n.icon, size: 20 }),
+    n.short || n.label,
+    n.key === "study" && stats.dueToday > 0 && /* @__PURE__ */ React.createElement("span", { className: "absolute right-[22%] top-1.5 h-2 w-2 rounded-full bg-warn" })
+  ))), modal && modal.type === "patient" && /* @__PURE__ */ React.createElement(PatientForm, { patients, onClose: close, onSave: (p) => {
+    setPatients((ps) => [...ps, p]), close(), toast(`${p.id} added`);
+  } }), modal && modal.type === "editPatient" && patients.find((p) => p.id === modal.preset) && /* @__PURE__ */ React.createElement(
+    PatientEditForm,
+    {
+      patient: patients.find((p) => p.id === modal.preset),
+      onClose: close,
+      onSave: (np) => {
+        updatePatient(np.id, np), close(), toast(`${np.id} updated`);
+      },
+      onArchive: (a) => {
+        close(), archivePatient(modal.preset, a);
+      },
+      onRemove: () => {
+        close(), removePatient(modal.preset);
+      }
+    }
+  ), modal && modal.type === "lab" && /* @__PURE__ */ React.createElement(LabForm, { patients: livePatients, onClose: close, onSave: (l) => {
+    setLabs((ls) => [...ls, l]), close(), toast("Lab case added");
+  } }), modal && modal.type === "log" && /* @__PURE__ */ React.createElement(LogCaseForm, { patients: livePatients, requirements, cases, preset: modal.preset, presetDiscipline: modal.extra, onClose: close, onSave: onLogCase }), modal && modal.type === "req" && /* @__PURE__ */ React.createElement(
+    RequirementForm,
+    {
+      initial: editingReq,
+      presetDiscipline: modal.extra,
+      caseCount: editingReq ? cases.filter((c) => c.reqId === editingReq.id).length : 0,
+      onSave: onSaveReq,
+      onDelete: onDeleteReq,
+      onClose: close
+    }
+  ), modal && modal.type === "journal" && /* @__PURE__ */ React.createElement(JournalForm, { patients: livePatients, onClose: close, onSave: (j) => {
+    setJournal((js) => [j, ...js]), close(), setTab("journal"), toast("Journal entry saved");
+  } }), modal && modal.type === "topic" && /* @__PURE__ */ React.createElement(TopicForm, { presetDiscipline: modal.extra, onClose: close, onSave: (t) => {
+    setTopics((ts) => [...ts, t]), close(), toast("Topic added");
+  } }), modal && modal.type === "tip" && /* @__PURE__ */ React.createElement(
+    TipForm,
+    {
+      initial: modal.preset ? tips.find((t) => t.id === modal.preset) : null,
+      presetDiscipline: modal.extra,
+      lecturers: tipLecturers,
+      lectures: tipLectures,
+      onSave: onSaveTip,
+      onDelete: onDeleteTip,
+      onClose: close
+    }
+  ), modal && modal.type === "data" && /* @__PURE__ */ React.createElement(DataPanel, { data, store, downloads, onImport, onReset, onClose: close }), toastMsg && /* @__PURE__ */ React.createElement("div", { key: toastMsg.k, role: "status", className: "toast fixed left-1/2 z-[60] -translate-x-1/2 rounded-xl bg-ink px-4 py-2.5 text-sm font-bold text-bg shadow-lg md:left-auto md:right-6 md:translate-x-0" }, /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-2" }, /* @__PURE__ */ React.createElement(Icon, { name: "CheckCircle2", size: 16 }), toastMsg.m, toastMsg.action && /* @__PURE__ */ React.createElement("button", { onClick: toastMsg.action.run, className: "ml-2 rounded-md border border-bg/40 px-2 py-0.5 text-xs font-bold text-bg hover:bg-bg/15" }, toastMsg.action.label))));
+}
+ReactDOM.createRoot(document.getElementById("root")).render(/* @__PURE__ */ React.createElement(App, null));
+
+}
+</script>
+
+</body></html>
